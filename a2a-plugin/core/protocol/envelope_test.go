@@ -51,6 +51,8 @@ func TestParseRequestErrors(t *testing.T) {
 		{"JSON mal formado", `{"jsonrpc":"2.0",`, CodeParseError, ""},
 		{"cuerpo vacío", ``, CodeParseError, ""},
 		{"texto", `esto no es json`, CodeParseError, ""},
+		{"UTF-8 inválido dentro de una cadena",
+			`{"jsonrpc":"2.0","id":1,"method":"GetTask","params":{"id":"` + string([]byte{0xf1}) + `"}}`, CodeParseError, ""},
 		{"datos tras el objeto", `{"jsonrpc":"2.0","id":1,"method":"GetTask"} {}`, CodeParseError, ""},
 		{"lote JSON-RPC", `[{"jsonrpc":"2.0","id":1,"method":"GetTask"}]`, CodeInvalidRequest, ""},
 		{"lote vacío", `[]`, CodeInvalidRequest, ""},

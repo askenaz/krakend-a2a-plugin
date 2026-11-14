@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"unicode/utf8"
 )
 
 // Request es una petición JSON-RPC 2.0 individual ya validada.
@@ -43,6 +44,11 @@ func ReadBody(r io.Reader, limit int64) ([]byte, *Error) {
 // Solo decodifica el primer nivel del objeto: el contenido de params no se
 // interpreta aquí.
 func ParseRequest(body []byte) (*Request, *Error) {
+	// JSON debe ir en UTF-8 (RFC 8259). json.Valid acepta bytes inválidos dentro
+	// de las cadenas, pero el agente puede rechazarlos.
+	if !utf8.Valid(body) {
+		return nil, newError(CodeParseError, "Parse error", "el cuerpo no es UTF-8 válido")
+	}
 	if !json.Valid(body) {
 		return nil, newError(CodeParseError, "Parse error", "el cuerpo no es JSON válido")
 	}

@@ -28,6 +28,10 @@ El gateway MUST rechazar, sin contactar con el agente, los cuerpos que no son un
 - **WHEN** el cuerpo no es JSON válido
 - **THEN** el gateway responde con el error `-32700` e `id` nulo
 
+#### Scenario: Cuerpo que no es UTF-8
+- **WHEN** el cuerpo contiene bytes que no son UTF-8 válido, aunque formen un JSON bien estructurado
+- **THEN** el gateway responde con el error `-32700` e `id` nulo, sin contactar con el agente
+
 #### Scenario: Sobre inválido
 - **WHEN** el cuerpo es JSON válido pero falta `"jsonrpc": "2.0"` o `method` no es una cadena
 - **THEN** el gateway responde con el error `-32600`
