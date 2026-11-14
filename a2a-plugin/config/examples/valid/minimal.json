@@ -1,0 +1,9 @@
+{
+  "public_url": "https://gw.example.com",
+  "agents": [
+    {
+      "id": "billing",
+      "card": { "source": "upstream", "url": "http://billing.internal:8080/.well-known/agent-card.json" }
+    }
+  ]
+}

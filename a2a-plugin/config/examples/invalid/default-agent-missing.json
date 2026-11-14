@@ -1,0 +1,5 @@
+{
+  "description": "default_agent apunta a un agente que no existe",
+  "expect": { "path": "default_agent", "message": "no existe", "schema_rejects": false },
+  "config": {"public_url": "https://gw.example.com", "default_agent": "sales", "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}]}
+}

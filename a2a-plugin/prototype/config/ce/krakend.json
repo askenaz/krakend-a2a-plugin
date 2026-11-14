@@ -1,0 +1,105 @@
+{
+  "version": 3,
+  "name": "a2a-proto-ce-2.13",
+  "port": 8080,
+  "timeout": "5s",
+  "plugin": {
+    "pattern": ".so",
+    "folder": "/opt/krakend/plugins/"
+  },
+  "extra_config": {
+    "telemetry/logging": {
+      "level": "INFO",
+      "prefix": "[KRAKEND]",
+      "stdout": true
+    },
+    "plugin/http-server": {
+      "name": ["a2a-gateway-proto"],
+      "a2a-gateway-proto": {
+        "base_path": "/a2a",
+        "internal_prefix": "/__a2a",
+        "no_flush_agents": ["y"]
+      }
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/__a2a/x/unary",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "input_headers": ["Content-Type", "A2A-Version", "A2A-Extensions", "X-A2A-Request-Id", "X-A2A-Operation", "X-A2A-Agent", "X-A2A-Sub", "X-A2A-Iss"],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "jwk_local_path": "/etc/krakend/jwk.json",
+          "disable_jwk_security": true,
+          "issuer": "https://idp.test.local",
+          "audience": ["a2a-gateway"],
+          "propagate_claims": [["sub", "X-A2A-Sub"], ["iss", "X-A2A-Iss"]]
+        },
+        "plugin/req-resp-modifier": {
+          "name": ["a2a-authz-proto"],
+          "a2a-authz-proto": { "deny_subject": "mallory" }
+        }
+      },
+      "backend": [
+        { "host": ["http://mock-agent:8080"], "url_pattern": "/", "encoding": "no-op" }
+      ]
+    },
+    {
+      "endpoint": "/__a2a/x/stream",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "timeout": "60s",
+      "input_headers": ["Content-Type", "A2A-Version", "A2A-Extensions", "X-A2A-Request-Id", "X-A2A-Operation", "X-A2A-Agent", "X-A2A-Sub", "X-A2A-Iss"],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "jwk_local_path": "/etc/krakend/jwk.json",
+          "disable_jwk_security": true,
+          "issuer": "https://idp.test.local",
+          "audience": ["a2a-gateway"],
+          "propagate_claims": [["sub", "X-A2A-Sub"], ["iss", "X-A2A-Iss"]]
+        },
+        "plugin/req-resp-modifier": {
+          "name": ["a2a-authz-proto"],
+          "a2a-authz-proto": { "deny_subject": "mallory" }
+        }
+      },
+      "backend": [
+        { "host": ["http://mock-agent:8080"], "url_pattern": "/", "encoding": "no-op" }
+      ]
+    },
+    {
+      "endpoint": "/__a2a/y/stream",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "timeout": "60s",
+      "input_headers": ["Content-Type", "A2A-Version", "A2A-Extensions", "X-A2A-Request-Id", "X-A2A-Operation", "X-A2A-Agent", "X-A2A-Sub", "X-A2A-Iss"],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "HS256",
+          "jwk_local_path": "/etc/krakend/jwk.json",
+          "disable_jwk_security": true,
+          "issuer": "https://idp.test.local",
+          "audience": ["a2a-gateway"],
+          "propagate_claims": [["sub", "X-A2A-Sub"], ["iss", "X-A2A-Iss"]]
+        },
+        "plugin/req-resp-modifier": {
+          "name": ["a2a-authz-proto"],
+          "a2a-authz-proto": { "deny_subject": "mallory" }
+        }
+      },
+      "backend": [
+        { "host": ["http://mock-agent:8080"], "url_pattern": "/", "encoding": "no-op" }
+      ]
+    },
+    {
+      "endpoint": "/plain",
+      "method": "GET",
+      "backend": [
+        { "host": ["http://mock-agent:8080"], "url_pattern": "/.well-known/agent-card.json" }
+      ]
+    }
+  ]
+}

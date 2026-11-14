@@ -1,0 +1,4 @@
+# Fin de línea LF en todo el repositorio: los scripts y Dockerfiles se usan
+# dentro de contenedores Linux, también desde Windows.
+* text=auto eol=lf
+*.so binary

@@ -1,0 +1,32 @@
+name: a2a-plugin
+
+on:
+  push:
+    paths: ["a2a-plugin/**", ".github/workflows/a2a-plugin.yml"]
+  pull_request:
+    paths: ["a2a-plugin/**", ".github/workflows/a2a-plugin.yml"]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.4"
+      - name: Licencia de Enterprise (opcional, desde un secreto)
+        env:
+          KRAKEND_EE_LICENSE: ${{ secrets.KRAKEND_EE_LICENSE }}
+        run: |
+          if [ -n "$KRAKEND_EE_LICENSE" ]; then
+            printf '%s' "$KRAKEND_EE_LICENSE" > "$RUNNER_TEMP/krakend-ee.lic"
+            echo "KRAKEND_EE_LICENSE_FILE=$RUNNER_TEMP/krakend-ee.lic" >> "$GITHUB_ENV"
+          fi
+      - name: CI
+        env:
+          A2A_TEST_REDIS: 127.0.0.1:6379
+        run: bash a2a-plugin/scripts/ci.sh

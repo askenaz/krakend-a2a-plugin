@@ -1,0 +1,5 @@
+{
+  "description": "Campo desconocido en la raíz",
+  "expect": { "path": "publicURL", "message": "campo desconocido", "schema_rejects": true },
+  "config": {"public_url": "https://gw.example.com", "publicURL": "https://x", "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}]}
+}

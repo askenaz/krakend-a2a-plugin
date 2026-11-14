@@ -1,0 +1,5 @@
+{
+  "description": "Un agente declara una política de tareas no registradas desconocida",
+  "expect": { "path": "agents[billing].ownership.unknown_task", "message": "no admitido", "schema_rejects": true },
+  "config": {"public_url": "https://gw.example.com", "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://b.internal/c.json"}, "ownership": {"unknown_task": "allow"}}]}
+}

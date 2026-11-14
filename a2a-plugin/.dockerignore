@@ -1,0 +1,23 @@
+# --- Licencia de KrakenD Enterprise y secretos: NUNCA se versionan ---
+# La licencia se monta en tiempo de ejecución desde una ruta fuera del repositorio.
+# Ver a2a-plugin/docs/desarrollo.md.
+# Si el proyecto adopta una licencia de código abierto, nómbrala COPYING
+# o añade aquí una excepción explícita y revisada.
+LICENSE
+LICENSE.*
+*.license
+*.lic
+.secrets/
+secrets/
+
+# --- Artefactos de compilación ---
+*.so
+out/
+
+# --- Entorno local ---
+.env
+.env.*
+
+# --- Solo para contextos de Docker ---
+.git
+**/out/

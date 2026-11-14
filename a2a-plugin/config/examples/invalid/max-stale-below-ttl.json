@@ -1,0 +1,5 @@
+{
+  "description": "max_stale menor que ttl",
+  "expect": { "path": "agents[billing].card.max_stale", "message": "menor que ttl", "schema_rejects": false },
+  "config": {"public_url": "https://gw.example.com", "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://b.internal/c.json", "ttl": "10m", "max_stale": "1m"}}]}
+}

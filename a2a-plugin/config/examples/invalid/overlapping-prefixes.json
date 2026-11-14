@@ -1,0 +1,5 @@
+{
+  "description": "La ruta pública y el prefijo interno se solapan",
+  "expect": { "path": "internal_prefix", "message": "solaparse", "schema_rejects": false },
+  "config": {"public_url": "https://gw.example.com", "base_path": "/__a2a/public", "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}]}
+}

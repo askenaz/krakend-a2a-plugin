@@ -1,0 +1,5 @@
+{
+  "description": "Versión con número de parche",
+  "expect": { "path": "agents[billing].versions[0]", "message": "no admitida", "schema_rejects": true },
+  "config": {"public_url": "https://gw.example.com", "agents": [{"id": "billing", "versions": ["1.0.0"], "card": {"source": "upstream", "url": "https://b.internal/c.json"}}]}
+}

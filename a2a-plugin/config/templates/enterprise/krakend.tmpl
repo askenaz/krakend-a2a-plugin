@@ -1,0 +1,45 @@
+{{- /* KrakenD Enterprise 3.0 con el plugin A2A. Generado desde settings/a2a.json. */ -}}
+{{- $s := .a2a -}}
+{
+  "version": 4,
+  "name": {{ marshal $s.service.name }},
+  "port": {{ $s.service.port }},
+  "timeout": {{ marshal $s.service.timeout }},
+  "extra_config": {
+    "plugin": { "pattern": ".so", "folder": "/opt/krakend/plugins/" },
+    "telemetry/logging": { "level": {{ marshal $s.service.log_level }}, "prefix": "[KRAKEND]", "stdout": true },
+    "plugin/http-server": {
+      "plugins": [ { "name": "a2a-gateway", "config": {{ template "a2a_block.tmpl" . }} } ]
+    }
+  },
+  "endpoints": [
+  {{- $first := true }}
+  {{- range $a := $s.agents }}
+  {{- range $r := $s.routes }}
+    {{- if not $first }},{{ end }}{{ $first = false }}
+    {
+      "endpoint": "{{ $s.plugin.internal_prefix }}/{{ $a.id }}/{{ $r.path }}",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "timeout": {{ if $r.stream }}{{ marshal $a.gateway.stream_timeout }}{{ else }}{{ marshal $a.gateway.timeout }}{{ end }},
+      "input_headers": ["Content-Type", "Accept", "A2A-Version", "A2A-Extensions", "X-A2A-Request-Id", "X-A2A-Operation", "X-A2A-Agent", "X-A2A-Version"{{ range $k, $h := $s.plugin.identity.headers }}, {{ marshal $h }}{{ end }}],
+      "extra_config": {
+        {{- range $k, $v := $a.gateway.extra_config }}
+        {{ marshal $k }}: {{ marshal $v }},
+        {{- end }}
+        "auth/validator": {
+          {{- range $k, $v := $s.auth }}
+          {{ marshal $k }}: {{ marshal $v }},
+          {{- end }}
+          "propagate_claims": [{{ $c := false }}{{ range $k, $h := $s.plugin.identity.headers }}{{ if $c }}, {{ end }}{{ $c = true }}[{{ marshal (index $s.claims $k) }}, {{ marshal $h }}]{{ end }}]
+        },
+        "plugin/req-resp-modifier": {
+          "plugins": [ { "name": "a2a-authz", "config": { "agent": {{ marshal $a.id }} } } ]
+        }
+      },
+      "backend": [ { "host": [{{ marshal $a.gateway.host }}], "url_pattern": {{ marshal $a.gateway.path }}, "encoding": "no-op" } ]
+    }
+  {{- end }}
+  {{- end }}
+  ]
+}

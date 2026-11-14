@@ -1,0 +1,5 @@
+{
+  "description": "Dos agentes con el mismo identificador",
+  "expect": { "path": "agents[billing].id", "message": "identificador duplicado", "schema_rejects": false },
+  "config": {"public_url": "https://gw.example.com", "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}, {"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}]}
+}

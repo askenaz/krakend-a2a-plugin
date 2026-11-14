@@ -1,0 +1,5 @@
+{
+  "description": "Card estática con inline y file a la vez",
+  "expect": { "path": "agents[billing].card", "message": "exactamente uno", "schema_rejects": true },
+  "config": {"public_url": "https://gw.example.com", "agents": [{"id": "billing", "card": {"source": "static", "file": "/c.json", "inline": {}}}]}
+}

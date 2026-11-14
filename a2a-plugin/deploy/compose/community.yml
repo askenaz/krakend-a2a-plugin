@@ -1,0 +1,88 @@
+# Demostración A2A con KrakenD Community 2.13.11.
+#
+#   docker compose -f deploy/compose/community.yml up -d --build
+#
+# El servicio "secrets" genera en deploy/.secrets (excluido de git) las claves y
+# los secretos de la demostración. Para rotarlos, borra ese directorio.
+#
+# Puertos en el equipo local:
+#   18080, 18081  dos nodos del gateway que comparten Redis
+#   18090         IdP simulado
+#   18091, 18092  administración de los agentes billing y research
+name: a2a-demo-ce
+
+x-gateway: &gateway
+  build: { context: ../.., dockerfile: build/community/Dockerfile }
+  image: krakend-a2a:ce-2.13.11
+  command: ["run", "-c", "/etc/krakend/krakend.tmpl"]
+  environment:
+    FC_ENABLE: "1"
+    FC_SETTINGS: /etc/krakend/settings
+    FC_TEMPLATES: /etc/krakend/templates
+    FC_OUT: /tmp/krakend.json
+    A2A_PUBLIC_URL: http://localhost:18080
+  volumes:
+    - ../../config/templates/settings:/etc/krakend/settings:ro
+    - ../../config/templates/templates:/etc/krakend/templates:ro
+    - ../../config/templates/community/krakend.tmpl:/etc/krakend/krakend.tmpl:ro
+    - ../.secrets/gateway:/etc/krakend/a2a:ro
+  depends_on:
+    secrets: { condition: service_completed_successfully }
+    redis: { condition: service_healthy }
+    mock-idp: { condition: service_healthy }
+    billing: { condition: service_healthy }
+    research: { condition: service_healthy }
+  healthcheck:
+    test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/__health"]
+    interval: 2s
+    retries: 30
+
+x-agent: &agent
+  build: ../reference-agent
+  image: a2a-reference-agent:demo
+
+services:
+  secrets:
+    build: ../demo-secrets
+    image: a2a-demo-secrets:demo
+    # Escribe en un directorio montado del equipo: en Linux necesita permisos
+    # sobre él, por eso se ejecuta como root solo este paso.
+    user: "0:0"
+    volumes: ["../.secrets:/out"]
+
+  redis:
+    image: redis:7.4-alpine
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 2s, retries: 20 }
+
+  mock-idp:
+    build: ../mock-idp
+    image: a2a-mock-idp:demo
+    environment: { ISSUER: "http://mock-idp:8080", AUDIENCE: a2a-gateway }
+    volumes: ["../.secrets/idp:/etc/mock-idp:ro"]
+    depends_on: { secrets: { condition: service_completed_successfully } }
+    ports: ["18090:8080"]
+
+  billing:
+    <<: *agent
+    environment: { PORT: "9001", AGENT_NAME: Billing, INTERNAL_URL: "http://billing:9001/", CARD_MODE: compat }
+    ports: ["18091:9001"]
+
+  research:
+    <<: *agent
+    environment:
+      PORT: "9002"
+      AGENT_NAME: Research
+      INTERNAL_URL: "http://research:9002/"
+      CARD_MODE: v1
+      SIGNING_KEY_FILE: /keys/card-signing.key.pem
+    volumes: ["../.secrets/agent:/keys:ro"]
+    depends_on: { secrets: { condition: service_completed_successfully } }
+    ports: ["18092:9002"]
+
+  gateway-a:
+    <<: *gateway
+    ports: ["18080:8080"]
+
+  gateway-b:
+    <<: *gateway
+    ports: ["18081:8080"]

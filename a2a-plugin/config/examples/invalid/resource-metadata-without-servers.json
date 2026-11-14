@@ -1,0 +1,5 @@
+{
+  "description": "Metadatos de recurso protegido sin servidores de autorización",
+  "expect": { "path": "challenge.authorization_servers", "message": "es obligatorio", "schema_rejects": true },
+  "config": {"public_url": "https://gw.example.com", "challenge": {"resource_metadata": true}, "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}]}
+}

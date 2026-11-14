@@ -1,0 +1,5 @@
+{
+  "description": "Card remota sin URL",
+  "expect": { "path": "agents[billing].card.url", "message": "es obligatorio", "schema_rejects": true },
+  "config": {"public_url": "https://gw.example.com", "agents": [{"id": "billing", "card": {"source": "upstream"}}]}
+}

@@ -1,0 +1,18 @@
+# Fase 0 · KrakenD Community 2.13.11 con el prototipo del plugin A2A.
+name: a2a-proto-ce
+services:
+  mock-agent:
+    build: ../deploy/mock-agent
+    environment:
+      STREAM_EVENTS: "3"
+      STREAM_DELAY: "1500ms"
+    ports: ["8090:8080"]
+  krakend:
+    image: krakend:2.13.11
+    command: ["run", "-c", "/etc/krakend/krakend.json"]
+    volumes:
+      - ./config/ce/krakend.json:/etc/krakend/krakend.json:ro
+      - ./.secrets/jwk.json:/etc/krakend/jwk.json:ro
+      - ./out/ce:/opt/krakend/plugins:ro
+    ports: ["8081:8080"]
+    depends_on: [mock-agent]

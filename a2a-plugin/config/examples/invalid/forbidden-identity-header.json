@@ -1,0 +1,5 @@
+{
+  "description": "La identidad no puede viajar en Authorization",
+  "expect": { "path": "identity.headers.subject", "message": "borra esta cabecera", "schema_rejects": false },
+  "config": {"public_url": "https://gw.example.com", "identity": {"headers": {"subject": "Authorization"}}, "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}]}
+}

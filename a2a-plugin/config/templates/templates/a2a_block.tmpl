@@ -1,0 +1,23 @@
+{{- /* Bloque de configuración del plugin A2A, común a ambas ediciones.
+     Se genera a partir de settings/a2a.json: los campos globales de .a2a.plugin
+     y, de cada agente, solo los campos que entiende el plugin. El campo gateway
+     de cada agente es para las plantillas y no llega al plugin. */ -}}
+{
+  {{- range $k, $v := .a2a.plugin }}
+  {{ marshal $k }}: {{ marshal $v }},
+  {{- end }}
+  "public_url": {{ marshal (env "A2A_PUBLIC_URL") }},
+  "agents": [
+  {{- range $i, $a := .a2a.agents }}{{ if $i }},{{ end }}
+    {
+      "id": {{ marshal $a.id }}
+      {{- if $a.versions }}, "versions": {{ marshal $a.versions }}{{ end }},
+      "card": {{ marshal $a.card }}
+      {{- if $a.security }}, "security": {{ marshal $a.security }}{{ end }}
+      {{- if $a.capabilities }}, "capabilities": {{ marshal $a.capabilities }}{{ end }}
+      {{- if $a.disabled_operations }}, "disabled_operations": {{ marshal $a.disabled_operations }}{{ end }}
+      {{- if $a.ownership }}, "ownership": {{ marshal $a.ownership }}{{ end }}
+    }
+  {{- end }}
+  ]
+}

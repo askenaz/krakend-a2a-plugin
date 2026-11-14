@@ -1,0 +1,492 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:krakend-a2a:config:a2a-gateway:v1",
+  "title": "Bloque de configuración del plugin A2A para KrakenD",
+  "description": "Mismo bloque en KrakenD Community 2.13 y Enterprise 3.0. En Community va bajo plugin/http-server, en la clave a2a-gateway; en Enterprise, en el campo config del plugin a2a-gateway. Las reglas que relacionan campos entre sí, como los identificadores de agente únicos, las comprueba el plugin al arrancar y no este esquema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["public_url", "agents"],
+  "properties": {
+    "public_url": {
+      "description": "URL con la que los clientes ven el gateway: esquema, host y puerto, sin ruta. Las Agent Cards publicadas anuncian esta URL, nunca la del agente.",
+      "type": "string",
+      "pattern": "^https?://[^\\s/?#@]+/?$",
+      "examples": ["https://gw.example.com"]
+    },
+    "base_path": {
+      "description": "Ruta pública bajo la que se publica cada agente: {base_path}/{agent}.",
+      "type": "string",
+      "default": "/a2a",
+      "pattern": "^(/[A-Za-z0-9._~-]+)+/?$"
+    },
+    "internal_prefix": {
+      "description": "Prefijo de las rutas internas por las que el plugin encamina cada operación. Desde fuera responden 404.",
+      "type": "string",
+      "default": "/__a2a",
+      "pattern": "^(/[A-Za-z0-9._~-]+)+/?$"
+    },
+    "route_granularity": {
+      "description": "class: dos endpoints internos por agente, unary y stream. operation: un endpoint por operación.",
+      "enum": ["class", "operation"],
+      "default": "class"
+    },
+    "default_agent": {
+      "description": "Agente cuya Agent Card se publica también en /.well-known/agent-card.json.",
+      "$ref": "#/$defs/agentId"
+    },
+    "limits": {
+      "description": "Límites de memoria por petición.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_body_bytes": {
+          "description": "Tamaño máximo del cuerpo de una petición A2A. Por encima se responde 413.",
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 67108864,
+          "default": 4194304
+        },
+        "max_inspect_bytes": {
+          "description": "Tamaño máximo de una respuesta que el plugin inspecciona para registrar la propiedad.",
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 268435456,
+          "default": 8388608
+        }
+      }
+    },
+    "identity": {
+      "description": "De qué cabeceras sale la identidad que KrakenD ya verificó, por ejemplo con propagate_claims.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required": {
+          "description": "Si es true, toda operación sin identidad se rechaza con 401.",
+          "type": "boolean",
+          "default": true
+        },
+        "headers": {
+          "description": "Nombre lógico de cada dato de identidad y cabecera que lo transporta. subject es obligatorio; scopes, si existe, lleva los scopes separados por espacios. Si se indica, sustituye por completo a los valores por defecto.",
+          "type": "object",
+          "required": ["subject"],
+          "additionalProperties": { "$ref": "#/$defs/headerName" },
+          "default": { "issuer": "X-A2A-Iss", "subject": "X-A2A-Sub", "scopes": "X-A2A-Scope" }
+        },
+        "owner_scope": {
+          "description": "Nombres lógicos de identity.headers que forman la clave de propietario. Por defecto issuer y subject.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "authorization": {
+      "description": "Autorización por operación A2A.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operation_scopes": {
+          "description": "Scopes que exige cada operación, con su nombre de A2A 1.0. El llamante debe tener todos los scopes de la lista.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/operation" },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/scope" }
+          }
+        }
+      }
+    },
+    "ownership": {
+      "description": "Registro de propiedad de tareas y contextos.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Activa el control de propiedad para todos los agentes.",
+          "type": "boolean",
+          "default": true
+        },
+        "store": {
+          "description": "memory solo es válido con un único nodo; redis comparte la propiedad entre nodos.",
+          "enum": ["memory", "redis"],
+          "default": "memory"
+        },
+        "ttl": {
+          "description": "Tiempo de vida de un registro desde su último uso.",
+          "$ref": "#/$defs/duration",
+          "default": "168h"
+        },
+        "unknown_task": {
+          "description": "Qué hacer con una tarea sin propietario registrado.",
+          "$ref": "#/$defs/policy",
+          "default": "deny"
+        },
+        "list_tasks": {
+          "description": "owned_context exige un contextId del llamante; deny rechaza ListTasks; passthrough lo deja pasar.",
+          "$ref": "#/$defs/listTasksPolicy",
+          "default": "owned_context"
+        },
+        "on_store_error": {
+          "description": "Qué hacer si el almacén no responde.",
+          "$ref": "#/$defs/policy",
+          "default": "deny"
+        },
+        "memory": {
+          "description": "Almacén en memoria.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_entries": {
+              "description": "Número máximo de registros en memoria.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000000,
+              "default": 100000
+            }
+          }
+        },
+        "redis": {
+          "description": "Almacén Redis. Las credenciales se leen de variables de entorno.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "address": {
+              "description": "Servidor Redis como host:puerto.",
+              "type": "string",
+              "pattern": "^[^\\s:]+:[0-9]{1,5}$|^\\[[0-9A-Fa-f:.]+\\]:[0-9]{1,5}$"
+            },
+            "db": {
+              "description": "Número de base de datos.",
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "tls": {
+              "description": "Conecta con TLS.",
+              "type": "boolean",
+              "default": false
+            },
+            "username_env": {
+              "description": "Variable de entorno con el usuario.",
+              "$ref": "#/$defs/envName"
+            },
+            "password_env": {
+              "description": "Variable de entorno con la contraseña.",
+              "$ref": "#/$defs/envName"
+            },
+            "timeout": {
+              "description": "Tiempo máximo por operación con Redis.",
+              "$ref": "#/$defs/duration",
+              "default": "2s"
+            }
+          }
+        }
+      },
+      "if": { "properties": { "store": { "const": "redis" } }, "required": ["store"] },
+      "then": { "required": ["redis"], "properties": { "redis": { "required": ["address"] } } }
+    },
+    "push_notifications": {
+      "description": "Guardia de las URLs de webhook de las notificaciones push.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "require_https": {
+          "description": "Rechaza webhooks que no usen HTTPS.",
+          "type": "boolean",
+          "default": true
+        },
+        "deny_private_networks": {
+          "description": "Rechaza webhooks hacia direcciones de loopback, privadas, link-local o de metadatos de nube.",
+          "type": "boolean",
+          "default": true
+        },
+        "allowed_hosts": {
+          "description": "Hosts permitidos, en minúsculas, con *. opcional al principio. Vacío permite cualquier host público.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/hostPattern" }
+        }
+      }
+    },
+    "challenge": {
+      "description": "Desafío WWW-Authenticate y metadatos de recurso protegido (RFC 9728).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scheme": {
+          "description": "Esquema que anuncia WWW-Authenticate.",
+          "$ref": "#/$defs/headerName",
+          "default": "Bearer"
+        },
+        "realm": {
+          "description": "Valor de realm en WWW-Authenticate.",
+          "type": "string",
+          "pattern": "^[^\"\\\\\\r\\n]*$"
+        },
+        "resource_metadata": {
+          "description": "Publica el documento de metadatos de recurso protegido de cada agente.",
+          "type": "boolean",
+          "default": false
+        },
+        "authorization_servers": {
+          "description": "Servidores de autorización que se anuncian en los metadatos.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/httpUrl" }
+        },
+        "scopes_supported": {
+          "description": "Scopes que se anuncian en los metadatos.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/scope" }
+        }
+      },
+      "if": { "properties": { "resource_metadata": { "const": true } }, "required": ["resource_metadata"] },
+      "then": { "required": ["authorization_servers"], "properties": { "authorization_servers": { "minItems": 1 } } }
+    },
+    "agents": {
+      "description": "Agentes publicados a través del gateway.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/agent" }
+    }
+  },
+  "$defs": {
+    "agentId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
+    },
+    "duration": {
+      "description": "Duración con el formato de Go, por ejemplo 500ms, 5m o 168h.",
+      "type": "string",
+      "pattern": "^(0|([0-9]*\\.?[0-9]+(ns|us|µs|μs|ms|s|m|h))+)$"
+    },
+    "operation": {
+      "enum": [
+        "SendMessage", "SendStreamingMessage", "GetTask", "ListTasks", "CancelTask", "SubscribeToTask",
+        "CreateTaskPushNotificationConfig", "GetTaskPushNotificationConfig",
+        "ListTaskPushNotificationConfigs", "DeleteTaskPushNotificationConfig", "GetExtendedAgentCard"
+      ]
+    },
+    "headerName": {
+      "type": "string",
+      "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$"
+    },
+    "scope": {
+      "type": "string",
+      "pattern": "^[\\x21\\x23-\\x5B\\x5D-\\x7E]+$"
+    },
+    "httpUrl": {
+      "type": "string",
+      "pattern": "^https?://[^\\s/?#@]+([/?][^\\s#]*)?$"
+    },
+    "envName": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "hostPattern": {
+      "type": "string",
+      "pattern": "^(\\*\\.)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$"
+    },
+    "policy": {
+      "enum": ["deny", "passthrough"]
+    },
+    "listTasksPolicy": {
+      "enum": ["owned_context", "deny", "passthrough"]
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "card"],
+      "properties": {
+        "id": {
+          "description": "Identificador del agente. Forma parte de la URL pública: {base_path}/{id}.",
+          "$ref": "#/$defs/agentId"
+        },
+        "versions": {
+          "description": "Versiones de A2A habilitadas para el agente. Sin cabecera A2A-Version se asume 0.3.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["1.0", "0.3"] },
+          "default": ["1.0"]
+        },
+        "card": { "$ref": "#/$defs/card" },
+        "security": { "$ref": "#/$defs/security" },
+        "capabilities": {
+          "description": "Capacidades que el gateway habilita. La card publicada solo las declara si además las declara el agente.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "streaming": {
+              "description": "Habilita SendStreamingMessage y SubscribeToTask.",
+              "type": "boolean",
+              "default": true
+            },
+            "push_notifications": {
+              "description": "Habilita las notificaciones push y sus cuatro operaciones de configuración.",
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "disabled_operations": {
+          "description": "Operaciones que el gateway rechaza para este agente.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/operation" }
+        },
+        "ownership": {
+          "description": "Sobrescribe para este agente las políticas globales de propiedad.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "description": "Activa o desactiva el control de propiedad solo para este agente.",
+              "type": "boolean"
+            },
+            "unknown_task": {
+              "description": "Política de tareas sin propietario para este agente.",
+              "$ref": "#/$defs/policy"
+            },
+            "list_tasks": {
+              "description": "Política de ListTasks para este agente.",
+              "$ref": "#/$defs/listTasksPolicy"
+            }
+          }
+        }
+      }
+    },
+    "card": {
+      "description": "Origen de la Agent Card.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "description": "static: card en la configuración o en un fichero. upstream: card que se obtiene del agente.",
+          "enum": ["static", "upstream"]
+        },
+        "inline": {
+          "description": "Agent Card escrita en la configuración. Solo con source static.",
+          "type": "object"
+        },
+        "file": {
+          "description": "Fichero local con la Agent Card. Solo con source static.",
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "description": "URL de descubrimiento del agente. Solo con source upstream.",
+          "$ref": "#/$defs/httpUrl"
+        },
+        "ttl": {
+          "description": "Tiempo durante el que se reutiliza la card obtenida del agente.",
+          "$ref": "#/$defs/duration",
+          "default": "5m"
+        },
+        "max_stale": {
+          "description": "Antigüedad máxima de la última copia válida si el agente no responde. No puede ser menor que ttl.",
+          "$ref": "#/$defs/duration",
+          "default": "1h"
+        },
+        "max_bytes": {
+          "description": "Tamaño máximo de la card obtenida del agente.",
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 16777216,
+          "default": 1048576
+        },
+        "http_max_age": {
+          "description": "max-age de Cache-Control en las respuestas de descubrimiento. 0s desactiva la caché del cliente.",
+          "$ref": "#/$defs/duration",
+          "default": "5m"
+        },
+        "signature": {
+          "description": "Verificación de la firma JWS de la card remota.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "verify": {
+              "description": "Rechaza la card remota si ninguna firma es válida.",
+              "type": "boolean",
+              "default": false
+            },
+            "jwks_file": {
+              "description": "Fichero JWKS con las claves de confianza.",
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "if": { "properties": { "verify": { "const": true } }, "required": ["verify"] },
+          "then": { "required": ["jwks_file"] }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "source": { "const": "static" } } },
+          "then": {
+            "oneOf": [
+              { "required": ["inline"], "not": { "required": ["file"] } },
+              { "required": ["file"], "not": { "required": ["inline"] } }
+            ],
+            "not": {
+              "anyOf": [
+                { "required": ["url"] },
+                { "properties": { "signature": { "properties": { "verify": { "const": true } }, "required": ["verify"] } }, "required": ["signature"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": { "properties": { "source": { "const": "upstream" } } },
+          "then": {
+            "required": ["url"],
+            "not": { "anyOf": [{ "required": ["inline"] }, { "required": ["file"] }] }
+          }
+        }
+      ]
+    },
+    "security": {
+      "description": "Esquemas y requisitos de seguridad del gateway, en formato de A2A 1.0. Sustituyen a los de la card del agente.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemes"],
+      "properties": {
+        "schemes": {
+          "description": "Esquemas por nombre.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/securityScheme" }
+        },
+        "requirements": {
+          "description": "Requisitos de seguridad que hacen referencia a los esquemas por nombre.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["schemes"],
+            "properties": {
+              "schemes": { "type": "object", "additionalProperties": { "type": "object" } }
+            }
+          }
+        }
+      }
+    },
+    "securityScheme": {
+      "description": "SecurityScheme de A2A 1.0: exactamente uno de los cinco tipos.",
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "apiKeySecurityScheme": { "type": "object" },
+        "httpAuthSecurityScheme": { "type": "object" },
+        "oauth2SecurityScheme": { "type": "object" },
+        "openIdConnectSecurityScheme": { "type": "object" },
+        "mtlsSecurityScheme": { "type": "object" }
+      }
+    }
+  }
+}

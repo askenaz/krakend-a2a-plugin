@@ -1,0 +1,24 @@
+# Fase 0 · KrakenD Enterprise 3.0.4 con el prototipo del plugin A2A.
+#
+# La licencia NO está en el repositorio. Define KRAKEND_EE_LICENSE_FILE con la
+# ruta absoluta a la licencia, fuera del repositorio, antes de arrancar.
+name: a2a-proto-ee
+services:
+  mock-agent:
+    build: ../deploy/mock-agent
+    environment:
+      STREAM_EVENTS: "3"
+      STREAM_DELAY: "1500ms"
+    ports: ["8091:8080"]
+  krakend:
+    image: krakend/krakend-ee:3.0.4
+    command: ["run", "-c", "/etc/krakend/krakend.json"]
+    environment:
+      KRAKEND_LICENSE_PATH: /run/krakend-license/LICENSE
+    volumes:
+      - ./config/ee/krakend.json:/etc/krakend/krakend.json:ro
+      - ./.secrets/jwk.json:/etc/krakend/jwk.json:ro
+      - ./out/ee:/opt/krakend/plugins:ro
+      - ${KRAKEND_EE_LICENSE_FILE:?Define KRAKEND_EE_LICENSE_FILE con la ruta a la licencia, fuera del repositorio}:/run/krakend-license/LICENSE:ro
+    ports: ["8082:8080"]
+    depends_on: [mock-agent]

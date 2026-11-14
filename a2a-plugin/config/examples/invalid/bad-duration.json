@@ -1,0 +1,5 @@
+{
+  "description": "Duración escrita en texto libre",
+  "expect": { "path": "ownership.ttl", "message": "duración inválida", "schema_rejects": true },
+  "config": {"public_url": "https://gw.example.com", "ownership": {"ttl": "una semana"}, "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}]}
+}

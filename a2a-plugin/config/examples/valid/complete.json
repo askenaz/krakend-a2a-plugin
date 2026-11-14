@@ -1,0 +1,61 @@
+{
+  "public_url": "https://gw.example.com",
+  "base_path": "/a2a",
+  "internal_prefix": "/__a2a",
+  "route_granularity": "class",
+  "default_agent": "billing",
+  "limits": { "max_body_bytes": 4194304, "max_inspect_bytes": 8388608 },
+  "identity": {
+    "required": true,
+    "headers": { "issuer": "X-A2A-Iss", "subject": "X-A2A-Sub", "scopes": "X-A2A-Scope" },
+    "owner_scope": ["issuer", "subject"]
+  },
+  "authorization": {
+    "operation_scopes": { "GetTask": ["a2a.read"], "CancelTask": ["a2a.write"] }
+  },
+  "ownership": {
+    "enabled": true,
+    "store": "redis",
+    "ttl": "168h",
+    "redis": { "address": "redis.internal:6379", "db": 0, "tls": true, "password_env": "A2A_REDIS_PASSWORD", "timeout": "2s" },
+    "unknown_task": "deny",
+    "list_tasks": "owned_context",
+    "on_store_error": "deny"
+  },
+  "push_notifications": {
+    "require_https": true,
+    "deny_private_networks": true,
+    "allowed_hosts": ["*.hooks.example.com"]
+  },
+  "challenge": {
+    "scheme": "Bearer",
+    "realm": "agents",
+    "resource_metadata": true,
+    "authorization_servers": ["https://idp.example.com/realms/agents"],
+    "scopes_supported": ["a2a.read", "a2a.write"]
+  },
+  "agents": [
+    {
+      "id": "billing",
+      "versions": ["1.0", "0.3"],
+      "card": {
+        "source": "upstream",
+        "url": "https://billing.internal/.well-known/agent-card.json",
+        "ttl": "5m",
+        "max_stale": "1h",
+        "max_bytes": 1048576,
+        "http_max_age": "5m",
+        "signature": { "verify": true, "jwks_file": "/etc/krakend/a2a/billing.jwks.json" }
+      },
+      "security": {
+        "schemes": {
+          "oidc": { "openIdConnectSecurityScheme": { "openIdConnectUrl": "https://idp.example.com/realms/agents/.well-known/openid-configuration" } }
+        },
+        "requirements": [ { "schemes": { "oidc": { "list": ["a2a.read"] } } } ]
+      },
+      "capabilities": { "streaming": true, "push_notifications": true },
+      "disabled_operations": ["ListTasks"],
+      "ownership": { "unknown_task": "deny" }
+    }
+  ]
+}

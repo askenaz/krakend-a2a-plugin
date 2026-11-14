@@ -1,0 +1,5 @@
+{
+  "description": "Lista de agentes vacía",
+  "expect": { "path": "agents", "message": "al menos un agente", "schema_rejects": true },
+  "config": {"public_url": "https://gw.example.com", "agents": []}
+}

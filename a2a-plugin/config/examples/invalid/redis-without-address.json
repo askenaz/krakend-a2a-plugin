@@ -1,0 +1,5 @@
+{
+  "description": "Almacén Redis sin dirección",
+  "expect": { "path": "ownership.redis.address", "message": "es obligatorio", "schema_rejects": true },
+  "config": {"public_url": "https://gw.example.com", "ownership": {"store": "redis"}, "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}]}
+}

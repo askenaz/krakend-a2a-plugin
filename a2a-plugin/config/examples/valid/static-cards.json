@@ -1,0 +1,31 @@
+{
+  "public_url": "http://localhost:8080",
+  "identity": { "required": false },
+  "ownership": { "enabled": false },
+  "agents": [
+    {
+      "id": "faq-bot",
+      "versions": ["0.3"],
+      "card": {
+        "source": "static",
+        "inline": {
+          "name": "FAQ bot",
+          "description": "Responde preguntas frecuentes",
+          "version": "1.0.0",
+          "url": "http://faq.internal/",
+          "preferredTransport": "JSONRPC",
+          "protocolVersion": "0.3.0",
+          "capabilities": { "streaming": false },
+          "defaultInputModes": ["text/plain"],
+          "defaultOutputModes": ["text/plain"],
+          "skills": []
+        }
+      },
+      "capabilities": { "streaming": false }
+    },
+    {
+      "id": "translator",
+      "card": { "source": "static", "file": "/etc/krakend/a2a/translator-card.json", "http_max_age": "0s" }
+    }
+  ]
+}

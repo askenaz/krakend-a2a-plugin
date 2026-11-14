@@ -1,0 +1,5 @@
+{
+  "description": "Scopes para un nombre de operación de 0.3",
+  "expect": { "path": "authorization.operation_scopes.tasks/get", "message": "operación desconocida", "schema_rejects": true },
+  "config": {"public_url": "https://gw.example.com", "authorization": {"operation_scopes": {"tasks/get": ["a2a.read"]}}, "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}]}
+}

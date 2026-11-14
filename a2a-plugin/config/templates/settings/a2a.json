@@ -1,0 +1,78 @@
+{
+  "service": { "name": "a2a-gateway", "port": 8080, "timeout": "5s", "log_level": "INFO" },
+
+  "auth": {
+    "alg": "RS256",
+    "jwk_url": "http://mock-idp:8080/.well-known/jwks.json",
+    "disable_jwk_security": true,
+    "issuer": "http://mock-idp:8080",
+    "audience": ["a2a-gateway"],
+    "cache": true
+  },
+
+  "claims": { "issuer": "iss", "subject": "sub", "scopes": "scope", "tenant": "tenant" },
+
+  "routes": [
+    { "path": "unary", "stream": false },
+    { "path": "stream", "stream": true }
+  ],
+
+  "plugin": {
+    "base_path": "/a2a",
+    "internal_prefix": "/__a2a",
+    "default_agent": "billing",
+    "identity": {
+      "required": true,
+      "headers": { "issuer": "X-A2A-Iss", "subject": "X-A2A-Sub", "scopes": "X-A2A-Scope", "tenant": "X-A2A-Tenant" },
+      "owner_scope": ["issuer", "subject"]
+    },
+    "authorization": {
+      "operation_scopes": {
+        "CancelTask": ["a2a.write"],
+        "CreateTaskPushNotificationConfig": ["a2a.write"],
+        "DeleteTaskPushNotificationConfig": ["a2a.write"]
+      }
+    },
+    "ownership": {
+      "store": "redis",
+      "ttl": "24h",
+      "redis": { "address": "redis:6379", "timeout": "1s" }
+    },
+    "push_notifications": { "allowed_hosts": ["hooks.example.com"] },
+    "challenge": {
+      "realm": "a2a-demo",
+      "resource_metadata": true,
+      "authorization_servers": ["http://mock-idp:8080"],
+      "scopes_supported": ["a2a.read", "a2a.write"]
+    }
+  },
+
+  "agents": [
+    {
+      "id": "billing",
+      "versions": ["1.0", "0.3"],
+      "card": { "source": "upstream", "url": "http://billing:9001/.well-known/agent-card.json", "ttl": "30s" },
+      "security": {
+        "schemes": { "bearer": { "httpAuthSecurityScheme": { "scheme": "Bearer", "bearerFormat": "JWT" } } },
+        "requirements": [ { "schemes": { "bearer": { "list": [] } } } ]
+      },
+      "capabilities": { "streaming": true, "push_notifications": true },
+      "gateway": { "host": "http://billing:9001", "path": "/", "timeout": "10s", "stream_timeout": "120s" }
+    },
+    {
+      "id": "research",
+      "versions": ["1.0"],
+      "card": {
+        "source": "upstream",
+        "url": "http://research:9002/.well-known/agent-card.json",
+        "signature": { "verify": true, "jwks_file": "/etc/krakend/a2a/card-signing.jwks.json" }
+      },
+      "capabilities": { "streaming": true },
+      "disabled_operations": ["ListTasks"],
+      "gateway": {
+        "host": "http://research:9002", "path": "/", "timeout": "10s", "stream_timeout": "120s",
+        "extra_config": { "qos/ratelimit/router": { "max_rate": 3 } }
+      }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "description": "Control de propiedad sin identidad obligatoria",
+  "expect": { "path": "ownership.enabled", "message": "identity.required=true", "schema_rejects": false },
+  "config": {"public_url": "https://gw.example.com", "identity": {"required": false}, "agents": [{"id": "billing", "card": {"source": "upstream", "url": "https://billing.internal/card.json"}}]}
+}
