@@ -1,0 +1,107 @@
+# Demostración del plugin A2A para KrakenD con dos agentes Pydantic AI.
+#
+#   docker compose up -d --build
+#   docker compose run --rm pruebas
+#
+# Se ejecuta desde esta carpeta, dentro del repositorio del plugin: de él salen
+# la imagen de KrakenD Community 2.13.11 con el plugin, sus plantillas de
+# configuración y el IdP simulado.
+#
+# El servicio "secretos" genera en .secrets (excluido de git) los secretos de
+# los clientes del IdP. Para rotarlos, borra ese directorio.
+#
+# Puertos en el equipo local:
+#   19080  gateway KrakenD con el plugin A2A
+#   19090  IdP simulado
+name: krakend-a2a-demo
+
+x-python: &python
+  build: ./python
+  image: krakend-a2a-demo-python:local
+
+x-agente: &agente
+  <<: *python
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/.well-known/agent-card.json')"]
+    interval: 2s
+    retries: 30
+
+services:
+  secretos:
+    <<: *python
+    # Escribe en un directorio montado del equipo: en Linux necesita permisos
+    # sobre él, por eso se ejecuta como root solo este paso.
+    user: "0:0"
+    command: ["python", "-m", "demo.secretos", "/out"]
+    volumes: ["./.secrets:/out"]
+
+  mock-idp:
+    build: ../../deploy/mock-idp
+    image: a2a-mock-idp:demo
+    environment: { ISSUER: "http://mock-idp:8080", AUDIENCE: a2a-gateway }
+    volumes: ["./.secrets/idp:/etc/mock-idp:ro"]
+    depends_on: { secretos: { condition: service_completed_successfully } }
+    ports: ["19090:8080"]
+
+  soporte:
+    <<: *agente
+    environment:
+      AGENTE: soporte
+      URL_INTERNA: http://soporte:8000/
+      DEMO_MODELO: ${DEMO_MODELO:-auto}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+  coordinador:
+    <<: *agente
+    environment:
+      AGENTE: coordinador
+      URL_INTERNA: http://coordinador:8000/
+      GATEWAY_URL: http://gateway:8080
+      IDP_URL: http://mock-idp:8080
+      CREDENCIALES: /run/demo/cliente.json
+      DEMO_MODELO: ${DEMO_MODELO:-auto}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes: ["./.secrets/coordinador:/run/demo:ro"]
+    depends_on: { secretos: { condition: service_completed_successfully } }
+
+  gateway:
+    build: { context: ../.., dockerfile: build/community/Dockerfile }
+    image: krakend-a2a:ce-2.13.11
+    command: ["run", "-c", "/etc/krakend/krakend.tmpl"]
+    environment:
+      FC_ENABLE: "1"
+      FC_SETTINGS: /etc/krakend/settings
+      FC_TEMPLATES: /etc/krakend/templates
+      FC_OUT: /tmp/krakend.json
+      A2A_PUBLIC_URL: http://localhost:19080
+    volumes:
+      - ./gateway/settings:/etc/krakend/settings:ro
+      - ../../config/templates/templates:/etc/krakend/templates:ro
+      - ../../config/templates/community/krakend.tmpl:/etc/krakend/krakend.tmpl:ro
+    depends_on:
+      mock-idp: { condition: service_healthy }
+      soporte: { condition: service_healthy }
+      coordinador: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/__health"]
+      interval: 2s
+      retries: 30
+    ports: ["19080:8080"]
+
+  # Pruebas de extremo a extremo contra el gateway: docker compose run --rm pruebas
+  pruebas:
+    <<: *python
+    profiles: ["pruebas"]
+    command: ["python", "/pruebas/probar_demo.py"]
+    environment:
+      GATEWAY_URL: http://gateway:8080
+      PUBLIC_URL: http://localhost:19080
+      IDP_URL: http://mock-idp:8080
+      CLIENTES: /run/demo/clients.json
+      DEMO_MODELO: ${DEMO_MODELO:-auto}
+      # Solo indica si hay clave de Claude, sin pasarla: decide qué textos se comprueban.
+      CLAUDE: ${ANTHROPIC_API_KEY:+si}
+    volumes:
+      - ./pruebas:/pruebas:ro
+      - ./.secrets/idp:/run/demo:ro
+    depends_on: { gateway: { condition: service_healthy } }

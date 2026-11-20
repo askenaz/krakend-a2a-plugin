@@ -51,6 +51,7 @@ bash deploy/demo.sh ee
 | `build/` | Construcción por edición y comprobación de artefactos |
 | `config/` | Esquema JSON, ejemplos, plantillas y pruebas de conformidad |
 | `deploy/` | IdP simulado, agente de referencia del SDK oficial, Compose y demostración |
+| `demos/pydantic-ai/` | Demostración con dos agentes Pydantic AI que hablan A2A a través del gateway |
 | `e2e/` | Pruebas de extremo a extremo con el SDK oficial y prueba de carga |
 | `prototype/` | Prototipo desechable de la fase 0 |
 | `scripts/ci.sh` | Integración continua completa |

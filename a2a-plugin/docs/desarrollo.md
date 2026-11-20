@@ -75,6 +75,7 @@ En Git Bash, los volúmenes de `docker run` necesitan `MSYS_NO_PATHCONV=1` y rut
 | Plantillas con KrakenD real | `bash config/templates/render.sh community` y `enterprise` | Docker |
 | Extremo a extremo | `A2A_EDITION=ce go test ./...` en `e2e` | El entorno de `deploy/compose` levantado |
 | Carga | `bash e2e/load.sh ce 30s` | El entorno de `deploy/compose` levantado |
+| Agentes Pydantic AI | `docker compose run --rm pruebas` en `demos/pydantic-ai` | Su entorno levantado; ver su README |
 | Integración continua: formato, pruebas con los dos Go, imágenes, artefactos y cruces entre ediciones | `bash scripts/ci.sh` | Docker; licencia opcional |
 
 `scripts/ci.sh` prueba el mismo código con Go 1.26.8 y Go 1.27.4, las versiones de las dos ediciones. Un uso de API posterior a Go 1.26 falla en `go vet`, porque los módulos declaran `go 1.26`, y en la compilación de Community.

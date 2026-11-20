@@ -1,0 +1,65 @@
+{
+  "service": { "name": "krakend-a2a-demo", "port": 8080, "timeout": "60s", "log_level": "INFO" },
+
+  "auth": {
+    "alg": "RS256",
+    "jwk_url": "http://mock-idp:8080/.well-known/jwks.json",
+    "disable_jwk_security": true,
+    "issuer": "http://mock-idp:8080",
+    "audience": ["a2a-gateway"],
+    "cache": true
+  },
+
+  "claims": { "issuer": "iss", "subject": "sub", "scopes": "scope", "tenant": "tenant" },
+
+  "routes": [
+    { "path": "unary", "stream": false },
+    { "path": "stream", "stream": true }
+  ],
+
+  "plugin": {
+    "base_path": "/a2a",
+    "internal_prefix": "/__a2a",
+    "default_agent": "soporte",
+    "identity": {
+      "required": true,
+      "headers": { "issuer": "X-A2A-Iss", "subject": "X-A2A-Sub", "scopes": "X-A2A-Scope", "tenant": "X-A2A-Tenant" },
+      "owner_scope": ["issuer", "subject"]
+    },
+    "authorization": { "operation_scopes": { "CancelTask": ["a2a.write"] } },
+    "ownership": { "store": "memory", "ttl": "24h" },
+    "challenge": {
+      "realm": "krakend-a2a-demo",
+      "resource_metadata": true,
+      "authorization_servers": ["http://mock-idp:8080"],
+      "scopes_supported": ["a2a.read", "a2a.write"]
+    }
+  },
+
+  "agents": [
+    {
+      "id": "soporte",
+      "versions": ["1.0", "0.3"],
+      "card": { "source": "upstream", "url": "http://soporte:8000/.well-known/agent-card.json", "ttl": "30s" },
+      "security": {
+        "schemes": { "bearer": { "httpAuthSecurityScheme": { "scheme": "Bearer", "bearerFormat": "JWT" } } },
+        "requirements": [ { "schemes": { "bearer": { "list": [] } } } ]
+      },
+      "capabilities": { "streaming": true },
+      "disabled_operations": ["ListTasks"],
+      "gateway": { "host": "http://soporte:8000", "path": "/", "timeout": "30s", "stream_timeout": "120s" }
+    },
+    {
+      "id": "coordinador",
+      "versions": ["1.0", "0.3"],
+      "card": { "source": "upstream", "url": "http://coordinador:8000/.well-known/agent-card.json", "ttl": "30s" },
+      "security": {
+        "schemes": { "bearer": { "httpAuthSecurityScheme": { "scheme": "Bearer", "bearerFormat": "JWT" } } },
+        "requirements": [ { "schemes": { "bearer": { "list": [] } } } ]
+      },
+      "capabilities": { "streaming": true },
+      "disabled_operations": ["ListTasks"],
+      "gateway": { "host": "http://coordinador:8000", "path": "/", "timeout": "30s", "stream_timeout": "120s" }
+    }
+  ]
+}
