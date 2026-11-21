@@ -1,8 +1,8 @@
 # --- Licencia de KrakenD Enterprise y secretos: NUNCA se versionan ---
 # La licencia se monta en tiempo de ejecución desde una ruta fuera del repositorio.
 # Ver a2a-plugin/docs/desarrollo.md.
-# Si el proyecto adopta una licencia de código abierto, nómbrala COPYING
-# o añade aquí una excepción explícita y revisada.
+# La licencia MIT del proyecto está en COPYING, que no coincide con estos patrones.
+# No añadas excepciones para LICENSE: esos nombres quedan reservados a esta red.
 LICENSE
 LICENSE.*
 *.license
