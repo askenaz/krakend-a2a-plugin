@@ -7,7 +7,7 @@
 # Este script lo detecta antes y explica la discrepancia.
 #
 # Uso, dentro de la imagen de KrakenD de destino:
-#   sh check-artifact.sh /opt/krakend/plugins/krakend-a2a-ce-2.13.11.so
+#   sh check-artifact.sh /opt/krakend/plugins/krakend-a2a-<edición>-<versión>.so
 #
 # Lee el manifiesto que acompaña al artefacto (mismo nombre, .manifest.json).
 # No necesita licencia: krakend version funciona sin ella.

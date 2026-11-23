@@ -5,6 +5,17 @@ on:
     paths: ["a2a-plugin/**", ".github/workflows/a2a-plugin.yml"]
   pull_request:
     paths: ["a2a-plugin/**", ".github/workflows/a2a-plugin.yml"]
+  # Ejecución manual, para probar una versión de KrakenD antes de adoptarla.
+  workflow_dispatch:
+    inputs:
+      krakend_ce_version:
+        description: "Versión de KrakenD Community (vacío: la de versions.env)"
+        required: false
+        type: string
+      krakend_ee_version:
+        description: "Versión de KrakenD Enterprise (vacío: la de versions.env)"
+        required: false
+        type: string
 
 jobs:
   ci:
@@ -15,9 +26,17 @@ jobs:
         ports: ["6379:6379"]
     steps:
       - uses: actions/checkout@v4
+      - name: Versiones de versions.env
+        env:
+          CE_INPUT: ${{ inputs.krakend_ce_version }}
+          EE_INPUT: ${{ inputs.krakend_ee_version }}
+        run: |
+          grep -E '^[A-Z_]+=' a2a-plugin/versions.env >> "$GITHUB_ENV"
+          if [ -n "$CE_INPUT" ]; then echo "KRAKEND_CE_VERSION=$CE_INPUT" >> "$GITHUB_ENV"; fi
+          if [ -n "$EE_INPUT" ]; then echo "KRAKEND_EE_VERSION=$EE_INPUT" >> "$GITHUB_ENV"; fi
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.27.4"
+          go-version: ${{ env.CI_GO_VERSION }}
       - name: Licencia de Enterprise (opcional, desde un secreto)
         env:
           KRAKEND_EE_LICENSE: ${{ secrets.KRAKEND_EE_LICENSE }}

@@ -1,6 +1,10 @@
-# Demostración A2A con KrakenD Community 2.13.11.
+# Demostración A2A con KrakenD Community.
 #
 #   docker compose -f deploy/compose/community.yml up -d --build
+#
+# La versión de KrakenD por defecto es una copia de KRAKEND_CE_VERSION de
+# versions.env; las pruebas de config/conformance fallan si dejan de coincidir.
+# Para levantar otra versión, define KRAKEND_CE_VERSION al ejecutar.
 #
 # El servicio "secrets" genera en deploy/.secrets (excluido de git) las claves y
 # los secretos de la demostración. Para rotarlos, borra ese directorio.
@@ -12,8 +16,11 @@
 name: a2a-demo-ce
 
 x-gateway: &gateway
-  build: { context: ../.., dockerfile: build/community/Dockerfile }
-  image: krakend-a2a:ce-2.13.11
+  build:
+    context: ../..
+    dockerfile: build/community/Dockerfile
+    args: { KRAKEND_VERSION: "${KRAKEND_CE_VERSION:-2.13.11}" }
+  image: krakend-a2a:ce-${KRAKEND_CE_VERSION:-2.13.11}
   command: ["run", "-c", "/etc/krakend/krakend.tmpl"]
   environment:
     FC_ENABLE: "1"

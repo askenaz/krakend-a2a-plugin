@@ -452,7 +452,7 @@ El modelo completo, con los riesgos conocidos, está en [docs/seguridad.md](a2a-
 | Nivel | Comando, desde `a2a-plugin` |
 |---|---|
 | Núcleo y adaptador | `cd core && go test ./...` y `cd plugin && go test ./...` |
-| Esquema, ejemplos y documentación | `cd config/conformance && go test ./...` |
+| Esquema, ejemplos, documentación y versiones | `cd config/conformance && go test ./...` |
 | Plantillas renderizadas con KrakenD real | `bash config/templates/render.sh community` y `enterprise` |
 | Extremo a extremo con el SDK oficial | `A2A_EDITION=ce go test ./...` en `e2e`, con el entorno de Community levantado |
 | Carga | `bash e2e/load.sh ce 30s` |
@@ -471,7 +471,7 @@ Estado verificado en las dos ediciones; la última ronda completa fue el 20 de n
   - gitleaks no encuentra secretos.
 - **GitHub Actions.** Ejecuta `scripts/ci.sh` en cada cambio.
 
-La matriz con las versiones exactas está en [docs/compatibilidad.md](a2a-plugin/docs/compatibilidad.md). El entorno de desarrollo se explica en [docs/desarrollo.md](a2a-plugin/docs/desarrollo.md).
+La matriz con las versiones exactas está en [docs/compatibilidad.md](a2a-plugin/docs/compatibilidad.md). El entorno de desarrollo, y cómo probar o adoptar una versión nueva de KrakenD, se explican en [docs/desarrollo.md](a2a-plugin/docs/desarrollo.md).
 
 ## Estructura del repositorio
 
@@ -487,7 +487,8 @@ La matriz con las versiones exactas está en [docs/compatibilidad.md](a2a-plugin
 │   ├── e2e/             Pruebas de extremo a extremo y prueba de carga
 │   ├── docs/            Configuración, seguridad, instalación y compatibilidad
 │   ├── prototype/       Prototipo desechable de la fase 0
-│   └── scripts/         Integración continua y análisis con SonarQube
+│   ├── scripts/         Integración continua y análisis con SonarQube
+│   └── versions.env     Versiones de KrakenD con las que se compila y verifica
 ├── openspec/            Propuesta, diseño, especificaciones y tareas
 ├── .github/workflows/   GitHub Actions
 └── COPYING              Licencia MIT

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Integración continua del plugin A2A.
 #
-# Comprueba el mismo código con los dos compiladores de destino:
-#   - Go 1.26.8, el de KrakenD Community 2.13.11.
-#   - Go 1.27.4, el de KrakenD Enterprise 3.0.4.
-# Un uso de API posterior a Go 1.26 falla en "go vet" (el módulo declara
-# go 1.26) y en la compilación de Community.
+# Comprueba el mismo código con los dos compiladores de destino: el de la imagen
+# de compilación de KrakenD Community y el de la de KrakenD Enterprise. Las
+# versiones salen de versions.env. Un uso de API posterior a Go 1.26 falla en
+# "go vet" (el módulo declara go 1.26) y en la compilación de Community.
 #
 # Variables opcionales:
+#   KRAKEND_CE_VERSION       versión de Community, en lugar de la de versions.env
+#   KRAKEND_EE_VERSION       versión de Enterprise, en lugar de la de versions.env
 #   KRAKEND_EE_LICENSE_FILE  licencia de Enterprise, fuera del repositorio, para
 #                            la prueba de carga del plugin en Enterprise
 #   A2A_TEST_REDIS           host:puerto de un Redis para la prueba de integración
@@ -16,12 +17,21 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
+. scripts/versions.sh
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) export MSYS_NO_PATHCONV=1; HOSTROOT=$(cygpath -w "$ROOT") ;;
   *) HOSTROOT=$ROOT ;;
 esac
 
 step() { printf '\n=== %s ===\n' "$*"; }
+
+# Prueba el núcleo y el adaptador dentro de una imagen de compilación.
+builder_tests() { # imagen
+  docker run --rm -e CGO_ENABLED=0 -v "$HOSTROOT:/src" -w /src/plugin "$1" \
+    sh -c 'go version && go vet ./... && go test -count=1 ./... && cd ../core && go vet ./... && go test -count=1 ./...'
+}
+
+step "Versiones: Community $KRAKEND_CE_VERSION y Enterprise $KRAKEND_EE_VERSION"
 
 step "Formato"
 unformatted=$(gofmt -l core plugin config/conformance deploy e2e 2>/dev/null || true)
@@ -41,13 +51,11 @@ step "El núcleo no tiene dependencias externas"
 deps=$(cd core && go list -m all | grep -v '^krakend-a2a.local/core$' || true)
 if [ -n "$deps" ]; then echo "Dependencias inesperadas en core: $deps"; exit 1; fi
 
-step "Pruebas con Go 1.26.8 (compilador de Community 2.13.11)"
-docker run --rm -e CGO_ENABLED=0 -v "$HOSTROOT:/src" -w /src/plugin krakend/builder:2.13.11 \
-  sh -c 'go vet ./... && go test -count=1 ./... && cd ../core && go vet ./... && go test -count=1 ./...'
+step "Pruebas con el compilador de Community $KRAKEND_CE_VERSION"
+builder_tests "$KRAKEND_CE_BUILDER"
 
-step "Pruebas con Go 1.27.4 (compilador de Enterprise 3.0.4)"
-docker run --rm -e CGO_ENABLED=0 -v "$HOSTROOT:/src" -w /src/plugin krakend/builder-ee:3.0.4 \
-  sh -c 'go vet ./... && go test -count=1 ./... && cd ../core && go vet ./... && go test -count=1 ./...'
+step "Pruebas con el compilador de Enterprise $KRAKEND_EE_VERSION"
+builder_tests "$KRAKEND_EE_BUILDER"
 
 if [ -n "${A2A_TEST_REDIS:-}" ]; then
   step "Integración con Redis ($A2A_TEST_REDIS)"
@@ -55,30 +63,32 @@ if [ -n "${A2A_TEST_REDIS:-}" ]; then
 fi
 
 if [ "${SKIP_IMAGES:-}" != "1" ]; then
-  step "Imagen y artefactos de Community 2.13.11"
-  docker build -f build/community/Dockerfile -t krakend-a2a:ce-2.13.11 .
-  docker build -f build/community/Dockerfile --target artifacts -o type=local,dest=out/community .
+  step "Imagen y artefactos de Community $KRAKEND_CE_VERSION"
+  docker build -f build/community/Dockerfile --build-arg KRAKEND_VERSION="$KRAKEND_CE_VERSION" -t "$A2A_CE_IMAGE" .
+  docker build -f build/community/Dockerfile --build-arg KRAKEND_VERSION="$KRAKEND_CE_VERSION" \
+    --target artifacts -o type=local,dest=out/community .
 
-  step "Imagen y artefactos de Enterprise 3.0.4"
-  docker build -f build/enterprise/Dockerfile -t krakend-a2a:ee-3.0.4 .
-  docker build -f build/enterprise/Dockerfile --target artifacts -o type=local,dest=out/enterprise .
+  step "Imagen y artefactos de Enterprise $KRAKEND_EE_VERSION"
+  docker build -f build/enterprise/Dockerfile --build-arg KRAKEND_VERSION="$KRAKEND_EE_VERSION" -t "$A2A_EE_IMAGE" .
+  docker build -f build/enterprise/Dockerfile --build-arg KRAKEND_VERSION="$KRAKEND_EE_VERSION" \
+    --target artifacts -o type=local,dest=out/enterprise .
 
   step "Cada edición rechaza el artefacto de la otra"
-  if docker run --rm --entrypoint sh -v "$HOSTROOT/out/community:/a:ro" krakend-a2a:ee-3.0.4 \
-       /opt/krakend/plugins/check-artifact.sh /a/krakend-a2a-ce-2.13.11.so; then
+  if docker run --rm --entrypoint sh -v "$HOSTROOT/out/community:/a:ro" "$A2A_EE_IMAGE" \
+       /opt/krakend/plugins/check-artifact.sh "/a/$A2A_CE_ARTIFACT.so"; then
     echo "ERROR: Enterprise aceptó el artefacto de Community"; exit 1
   fi
-  if docker run --rm --entrypoint sh -v "$HOSTROOT/out/enterprise:/a:ro" krakend-a2a:ce-2.13.11 \
-       /opt/krakend/plugins/check-artifact.sh /a/krakend-a2a-ee-3.0.4.so; then
+  if docker run --rm --entrypoint sh -v "$HOSTROOT/out/enterprise:/a:ro" "$A2A_CE_IMAGE" \
+       /opt/krakend/plugins/check-artifact.sh "/a/$A2A_EE_ARTIFACT.so"; then
     echo "ERROR: Community aceptó el artefacto de Enterprise"; exit 1
   fi
 
   if [ -n "${KRAKEND_EE_LICENSE_FILE:-}" ]; then
     step "Prueba de carga en Enterprise con la licencia montada"
-    bash build/enterprise/plugin-test.sh krakend-a2a:ee-3.0.4
+    bash build/enterprise/plugin-test.sh "$A2A_EE_IMAGE"
   else
     echo "(sin KRAKEND_EE_LICENSE_FILE: se omite la prueba de carga en Enterprise)"
   fi
 fi
 
-step "Todo correcto"
+step "Todo correcto: Community $KRAKEND_CE_VERSION y Enterprise $KRAKEND_EE_VERSION"

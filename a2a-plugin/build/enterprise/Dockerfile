@@ -1,7 +1,12 @@
 # Plugin A2A para KrakenD Enterprise 3.0.
 #
 # Contexto de construcción: el directorio a2a-plugin.
-#   docker build -f build/enterprise/Dockerfile -t krakend-a2a:ee-3.0.4 .
+#   docker build -f build/enterprise/Dockerfile -t krakend-a2a:ee-<versión> .
+#
+# El valor por defecto de KRAKEND_VERSION es una copia de KRAKEND_EE_VERSION de
+# versions.env, para que el comando anterior funcione sin argumentos. Las
+# pruebas de config/conformance fallan si las dos dejan de coincidir.
+# Para otra versión: --build-arg KRAKEND_VERSION=<versión>.
 #
 # La imagen no contiene la licencia de Enterprise. La prueba de carga con
 # "krakend plugin test" la necesita, así que se ejecuta aparte con

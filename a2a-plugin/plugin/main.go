@@ -4,9 +4,11 @@
 //
 // Un único código fuente que se compila para dos objetivos (design.md D1):
 //
-//   - KrakenD Community 2.13.11, con krakend/builder:2.13.11.
+//   - KrakenD Community 2.13, con la imagen krakend/builder de su versión.
 //   - KrakenD Enterprise 3.0.4 o superior, con krakend/builder-ee del mismo
 //     número de versión.
+//
+// Las versiones con las que se compila y verifica están en versions.env.
 //
 // Exporta dos símbolos que existen en ambas ediciones:
 //
