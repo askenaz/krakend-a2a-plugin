@@ -3,6 +3,7 @@
 # Ver a2a-plugin/docs/desarrollo.md.
 # La licencia MIT del proyecto está en COPYING, que no coincide con estos patrones.
 # No añadas excepciones para LICENSE: esos nombres quedan reservados a esta red.
+# La red también oculta código: no llames "secrets" a un paquete o carpeta de fuentes.
 LICENSE
 LICENSE.*
 *.license

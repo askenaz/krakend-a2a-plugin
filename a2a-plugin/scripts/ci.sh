@@ -32,6 +32,11 @@ for m in core plugin config/conformance; do
   (cd "$m" && go vet ./... && go test -count=1 ./...)
 done
 
+step "Las pruebas de extremo a extremo compilan"
+# No se ejecutan aquí: necesitan el entorno de deploy/compose levantado.
+# Compilarlas detecta, en un clon limpio, un paquete que no haya llegado a git.
+(cd e2e && go vet ./...)
+
 step "El núcleo no tiene dependencias externas"
 deps=$(cd core && go list -m all | grep -v '^krakend-a2a.local/core$' || true)
 if [ -n "$deps" ]; then echo "Dependencias inesperadas en core: $deps"; exit 1; fi

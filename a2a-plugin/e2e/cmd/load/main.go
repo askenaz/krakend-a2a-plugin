@@ -20,7 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"krakend-a2a.local/e2e/internal/secrets"
+	"krakend-a2a.local/e2e/internal/democlients"
 )
 
 const headerContentType = "Content-Type"
@@ -32,7 +32,7 @@ func main() {
 	duration := flag.Duration("duration", 20*time.Second, "duración")
 	workers := flag.Int("concurrency", 16, "peticiones simultáneas")
 	streamEvery := flag.Int("stream-every", 4, "uno de cada N es un flujo SSE")
-	clientsFile := flag.String("clients", secrets.ClientsFile(),
+	clientsFile := flag.String("clients", democlients.ClientsFile(),
 		"clientes del IdP simulado que genera deploy/demo-secrets")
 	flag.Parse()
 
@@ -182,7 +182,7 @@ func (s *stats) failed() bool {
 }
 
 func token(idp, clientsFile string) (string, error) {
-	secret, err := secrets.ClientSecret(clientsFile, "alice-app")
+	secret, err := democlients.ClientSecret(clientsFile, "alice-app")
 	if err != nil {
 		return "", err
 	}

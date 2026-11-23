@@ -28,7 +28,7 @@ import (
 	"github.com/a2aproject/a2a-go/v2/a2aclient/agentcard"
 	"github.com/a2aproject/a2a-go/v2/a2acompat/a2av0"
 
-	"krakend-a2a.local/e2e/internal/secrets"
+	"krakend-a2a.local/e2e/internal/democlients"
 )
 
 type environment struct {
@@ -77,7 +77,7 @@ func token(t *testing.T, client string) string {
 		return tok
 	}
 	e := env(t)
-	secret, err := secrets.ClientSecret(secrets.ClientsFile(), client)
+	secret, err := democlients.ClientSecret(democlients.ClientsFile(), client)
 	if err != nil {
 		t.Fatal(err)
 	}
