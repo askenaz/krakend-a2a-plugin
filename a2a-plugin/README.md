@@ -460,7 +460,7 @@ Las pruebas hacen 27 comprobaciones. Sin credenciales, los agentes usan un model
 | Nivel | Comando | Qué necesita |
 |---|---|---|
 | Núcleo y adaptador | `cd core && go test ./...` y `cd plugin && go test ./...` | Go 1.26 o superior |
-| Esquema, ejemplos y documentación | `cd config/conformance && go test ./...` | Go |
+| Esquema, ejemplos, documentación y versiones | `cd config/conformance && go test ./...` | Go |
 | Redis real | `A2A_TEST_REDIS=host:puerto go test -run TestRedisStore ./ownership/` en `core` | Un Redis |
 | Plantillas con KrakenD real | `bash config/templates/render.sh community` y `enterprise` | Docker |
 | Extremo a extremo | `A2A_EDITION=ce go test ./...` en `e2e`, o `A2A_EDITION=ee` | El entorno de `deploy/compose` levantado |
@@ -502,6 +502,7 @@ Estado verificado en las dos ediciones; la última ronda completa fue el 20 de n
 | `e2e/` | Pruebas de extremo a extremo con el SDK oficial y prueba de carga |
 | `docs/` | Configuración, seguridad, instalación, compatibilidad y desarrollo |
 | `prototype/` | Prototipo desechable de la fase 0 |
+| `versions.env` | Versiones de KrakenD con las que se compila y verifica; único lugar donde se fijan |
 | `scripts/ci.sh` | Integración continua completa |
 | `scripts/sonar.sh` | Análisis local con SonarQube |
 

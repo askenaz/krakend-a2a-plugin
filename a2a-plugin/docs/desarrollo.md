@@ -15,6 +15,64 @@
 
 Cada artefacto solo carga en el binario de su edición y versión. Un artefacto equivocado aborta el arranque del gateway.
 
+## Versiones de KrakenD
+
+Las versiones se fijan en un único fichero, `versions.env`:
+
+| Variable | Qué fija |
+|---|---|
+| `KRAKEND_CE_VERSION` | Versión de Community: imágenes `krakend/builder` y `krakend` |
+| `KRAKEND_EE_VERSION` | Versión de Enterprise: imágenes `krakend/builder-ee` y `krakend/krakend-ee` |
+| `CI_GO_VERSION` | Go del equipo de integración continua, para el formato y las pruebas fuera de Docker |
+
+`scripts/ci.sh`, `config/templates/render.sh`, `build/enterprise/plugin-test.sh` y GitHub Actions lo leen al ejecutarse. Docker y la documentación no pueden leerlo, así que llevan una copia:
+
+- El valor por defecto de `KRAKEND_VERSION` en los dos Dockerfiles.
+- El valor por defecto de la versión en los ficheros de Compose.
+- Los nombres de imagen y de artefacto en los comandos de la documentación.
+
+Las pruebas de `config/conformance` fallan si alguna copia nombra otra versión, e indican el fichero y la línea. No revisan el prototipo ni `validacion-supuestos.md`, que son el registro de la fase 0.
+
+### Probar una versión nueva de KrakenD
+
+Una versión nueva no exige cambiar el código del plugin, pero sí compilarlo de nuevo: cada artefacto solo carga en su versión exacta. Para probarla sin tocar ningún fichero, define la variable al ejecutar:
+
+```bash
+KRAKEND_EE_VERSION=3.2.0 bash scripts/ci.sh
+```
+
+El script compila el plugin con la imagen de compilación de esa versión, ejecuta las pruebas con su Go y comprueba el artefacto en su imagen oficial. Con `KRAKEND_EE_LICENSE_FILE` definida, prueba además la carga del plugin. Tiene que existir la imagen `krakend/builder-ee` de esa versión, y la versión debe ser exacta: no valen `3.2` ni `latest`.
+
+La misma variable sirve para las plantillas y para el entorno de extremo a extremo:
+
+```bash
+KRAKEND_EE_VERSION=3.2.0 bash config/templates/render.sh enterprise
+```
+
+```bash
+KRAKEND_EE_VERSION=3.2.0 docker compose -f deploy/compose/enterprise.yml up -d --build
+```
+
+En GitHub, el workflow `a2a-plugin` se puede lanzar a mano con la versión como parámetro.
+
+Todo el contacto con KrakenD está en el adaptador, `plugin/`. Si una versión cambia alguno de estos puntos, la corrección va ahí y no en `core/`:
+
+| Punto de contacto | Dónde está | Cómo se nota si cambia |
+|---|---|---|
+| Firmas de `RegisterHandlers` y `RegisterModifiers` | `plugin/main.go` | Falla la prueba de carga del plugin |
+| Forma del mapa de configuración que recibe el plugin | `pluginConfig`, en `plugin/main.go` | KrakenD no arranca o fallan las pruebas de extremo a extremo |
+| Envoltorio de la petición que recibe el modificador | `headerReader` y `contextReader`, en `plugin/main.go` | Los endpoints internos responden 500 y fallan las pruebas de extremo a extremo |
+| Logger que entrega KrakenD | `krakendLogger`, en `plugin/logger.go` | Nada falla: los registros del plugin salen sin el formato de KrakenD. Hay que mirarlo en los registros |
+| Formato de `krakend.json` y comandos del CLI | `config/templates/` y `build/` | Falla `render.sh` o la construcción de la imagen |
+
+### Adoptar una versión
+
+1. Cambia la variable en `versions.env`.
+2. Ejecuta `go test ./...` en `config/conformance` y actualiza cada referencia que liste.
+3. Ejecuta `bash scripts/ci.sh` y las pruebas de extremo a extremo.
+4. Añade la fila de la versión a `compatibilidad.md`, con el Go y la libc del manifiesto del artefacto.
+5. Revisa el texto que nombra la versión anterior: `git grep -n "<versión anterior>"`.
+
 ## Licencia de KrakenD Enterprise
 
 Reglas:
@@ -70,7 +128,7 @@ En Git Bash, los volúmenes de `docker run` necesitan `MSYS_NO_PATHCONV=1` y rut
 | Nivel | Comando, desde `a2a-plugin` | Qué necesita |
 |---|---|---|
 | Núcleo y adaptador | `cd core && go test ./...` y `cd plugin && go test ./...` | Go 1.26 o superior |
-| Esquema, ejemplos y documentación | `cd config/conformance && go test ./...` | Go |
+| Esquema, ejemplos, documentación y versiones | `cd config/conformance && go test ./...` | Go |
 | Redis real | `A2A_TEST_REDIS=host:puerto go test -run TestRedisStore ./ownership/` en `core` | Un Redis |
 | Plantillas con KrakenD real | `bash config/templates/render.sh community` y `enterprise` | Docker |
 | Extremo a extremo | `A2A_EDITION=ce go test ./...` en `e2e` | El entorno de `deploy/compose` levantado |
@@ -78,7 +136,7 @@ En Git Bash, los volúmenes de `docker run` necesitan `MSYS_NO_PATHCONV=1` y rut
 | Agentes Pydantic AI | `docker compose run --rm pruebas` en `demos/pydantic-ai` | Su entorno levantado; ver su README |
 | Integración continua: formato, pruebas con los dos Go, imágenes, artefactos y cruces entre ediciones | `bash scripts/ci.sh` | Docker; licencia opcional |
 
-`scripts/ci.sh` prueba el mismo código con Go 1.26.8 y Go 1.27.4, las versiones de las dos ediciones. Un uso de API posterior a Go 1.26 falla en `go vet`, porque los módulos declaran `go 1.26`, y en la compilación de Community.
+`scripts/ci.sh` prueba el mismo código con el Go de la imagen de compilación de cada edición; las versiones exactas están en `compatibilidad.md`. Un uso de API posterior a Go 1.26 falla en `go vet`, porque los módulos declaran `go 1.26`, y en la compilación de Community.
 
 El detector de carreras necesita un compilador C. Se ejecuta en un contenedor:
 

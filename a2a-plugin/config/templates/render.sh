@@ -4,13 +4,15 @@
 # Uso: config/templates/render.sh <community|enterprise> [public_url]
 # Escribe la configuración generada en out/rendered-<edición>.json.
 # "krakend check" no necesita licencia en Enterprise.
+# Usa la imagen oficial de la versión de versions.env.
 set -euo pipefail
 EDITION="${1:?uso: render.sh <community|enterprise> [public_url]}"
 PUBLIC_URL="${2:-http://localhost:8080}"
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+. "$ROOT/scripts/versions.sh"
 case "$EDITION" in
-  community) IMAGE=krakend:2.13.11 ;;
-  enterprise) IMAGE=krakend/krakend-ee:3.0.4 ;;
+  community) IMAGE=$KRAKEND_CE_RUNTIME ;;
+  enterprise) IMAGE=$KRAKEND_EE_RUNTIME ;;
   *) echo "edición desconocida: $EDITION" >&2; exit 2 ;;
 esac
 case "$(uname -s)" in

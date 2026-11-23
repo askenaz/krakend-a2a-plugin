@@ -4,9 +4,12 @@
 #
 # Uso:
 #   KRAKEND_EE_LICENSE_FILE=/ruta/fuera/del/repo/LICENSE build/enterprise/plugin-test.sh [imagen]
+#
+# Sin argumento, prueba la imagen de la versión de Enterprise de versions.env.
 set -euo pipefail
 
-IMAGE="${1:-krakend-a2a:ee-3.0.4}"
+. "$(dirname "$0")/../../scripts/versions.sh"
+IMAGE="${1:-$A2A_EE_IMAGE}"
 LICENSE_FILE="${KRAKEND_EE_LICENSE_FILE:?Define KRAKEND_EE_LICENSE_FILE con la ruta a la licencia, fuera del repositorio}"
 [ -f "$LICENSE_FILE" ] || { echo "ERROR: no existe el fichero indicado en KRAKEND_EE_LICENSE_FILE" >&2; exit 1; }
 

@@ -1,7 +1,12 @@
 # Plugin A2A para KrakenD Community 2.13.
 #
 # Contexto de construcción: el directorio a2a-plugin.
-#   docker build -f build/community/Dockerfile -t krakend-a2a:ce-2.13.11 .
+#   docker build -f build/community/Dockerfile -t krakend-a2a:ce-<versión> .
+#
+# El valor por defecto de KRAKEND_VERSION es una copia de KRAKEND_CE_VERSION de
+# versions.env, para que el comando anterior funcione sin argumentos. Las
+# pruebas de config/conformance fallan si las dos dejan de coincidir.
+# Para otra versión: --build-arg KRAKEND_VERSION=<versión>.
 #
 # Etapas:
 #   build      compila y prueba con el mismo Go que el binario de KrakenD

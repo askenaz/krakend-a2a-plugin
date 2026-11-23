@@ -1,6 +1,6 @@
 # Matriz de compatibilidad
 
-Versión del plugin: **0.1.0**. Verificada el 13 de noviembre de 2026.
+Versión del plugin: **0.1.0**. Verificada el 13 de noviembre de 2026. Enterprise 3.0.5 se verificó el 22 de noviembre de 2026 con el mismo código.
 
 ## KrakenD
 
@@ -8,8 +8,11 @@ Versión del plugin: **0.1.0**. Verificada el 13 de noviembre de 2026.
 |---|---|---|---|---|---|
 | Community | 2.13.11 | 1.26.8 | MUSL-1.2.5 (Alpine 3.23.5) | `krakend/builder:2.13.11` | **Sin correcciones de seguridad desde el 8 de septiembre de 2026.** Community 3.x no carga plugins Go. |
 | Enterprise | 3.0.4 | 1.27.4 | MUSL-1.2.5 (Alpine 3.23.8) | `krakend/builder-ee:3.0.4` | Con soporte. Evitar 3.0.0 a 3.0.3 por un fallo en los modificadores. |
+| Enterprise | 3.0.5 | 1.27.4 | MUSL-1.2.5 (Alpine 3.23.8) | `krakend/builder-ee:3.0.5` | Con soporte. Mismo Go y misma libc que 3.0.4. Se compila con `KRAKEND_EE_VERSION=3.0.5` o `--build-arg KRAKEND_VERSION=3.0.5`. |
 
 Cada artefacto solo carga en la edición, versión, Go y libc exactos de su manifiesto. Las versiones de Go y libc de cada imagen de compilación coinciden con las del binario de destino.
+
+Las versiones con las que se compila por defecto se fijan en `versions.env`, y esta tabla debe tener una fila para cada una. Cómo probar o adoptar una versión nueva de KrakenD se explica en `desarrollo.md`.
 
 ## A2A
 
@@ -30,16 +33,16 @@ Cada artefacto solo carga en la edición, versión, Go y libc exactos de su mani
 
 ## Pruebas que respaldan esta matriz
 
-| Prueba | Community 2.13.11 | Enterprise 3.0.4 |
-|---|---|---|
-| Pruebas unitarias con el Go de la edición | Superadas | Superadas |
-| `check-artifact.sh` y rechazo del artefacto de la otra edición | Superadas | Superadas |
-| Comprobación de compatibilidad y carga de KrakenD | Superadas | Superadas, con licencia |
-| Plantillas renderizadas con `krakend check` | Superadas | Superadas |
-| Extremo a extremo con el SDK oficial, 1.0 y 0.3 | Superadas | Superadas |
-| Control de acceso y propiedad entre dos nodos | Superadas | Superadas |
-| Configuración inválida impide arrancar | Superada | Superada |
-| Carga de 30 s, 16 clientes, dos nodos | 77 058 peticiones, todas correctas | 2 941 peticiones, todas correctas |
+| Prueba | Community 2.13.11 | Enterprise 3.0.4 | Enterprise 3.0.5 |
+|---|---|---|---|
+| Pruebas unitarias con el Go de la edición | Superadas | Superadas | Superadas |
+| `check-artifact.sh` y rechazo del artefacto de la otra edición | Superadas | Superadas | Superadas |
+| Comprobación de compatibilidad y carga de KrakenD | Superadas | Superadas, con licencia | Superadas, con licencia |
+| Plantillas renderizadas con `krakend check` | Superadas | Superadas | Superadas |
+| Extremo a extremo con el SDK oficial, 1.0 y 0.3 | Superadas | Superadas | Superadas |
+| Control de acceso y propiedad entre dos nodos | Superadas | Superadas | Superadas |
+| Configuración inválida impide arrancar | Superada | Superada | Superada |
+| Carga de 30 s, 16 clientes, dos nodos | 77 058 peticiones, todas correctas | 2 941 peticiones, todas correctas | 4 052 peticiones, todas correctas |
 
 La diferencia de volumen en la prueba de carga no la causa el plugin: un Enterprise 3.0.4 sin el plugin rinde igual en la misma máquina. Ver `enterprise.md`.
 

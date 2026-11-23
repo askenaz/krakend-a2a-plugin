@@ -4,8 +4,11 @@
 #   docker compose run --rm pruebas
 #
 # Se ejecuta desde esta carpeta, dentro del repositorio del plugin: de él salen
-# la imagen de KrakenD Community 2.13.11 con el plugin, sus plantillas de
-# configuración y el IdP simulado.
+# la imagen de KrakenD Community con el plugin, sus plantillas de configuración
+# y el IdP simulado.
+#
+# La versión de KrakenD por defecto es una copia de KRAKEND_CE_VERSION de
+# versions.env; las pruebas de config/conformance fallan si dejan de coincidir.
 #
 # El servicio "secretos" genera en .secrets (excluido de git) los secretos de
 # los clientes del IdP. Para rotarlos, borra ese directorio.
@@ -65,8 +68,11 @@ services:
     depends_on: { secretos: { condition: service_completed_successfully } }
 
   gateway:
-    build: { context: ../.., dockerfile: build/community/Dockerfile }
-    image: krakend-a2a:ce-2.13.11
+    build:
+      context: ../..
+      dockerfile: build/community/Dockerfile
+      args: { KRAKEND_VERSION: "${KRAKEND_CE_VERSION:-2.13.11}" }
+    image: krakend-a2a:ce-${KRAKEND_CE_VERSION:-2.13.11}
     command: ["run", "-c", "/etc/krakend/krakend.tmpl"]
     environment:
       FC_ENABLE: "1"
