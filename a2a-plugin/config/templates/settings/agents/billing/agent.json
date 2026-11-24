@@ -1,0 +1,16 @@
+{
+  "id": "billing",
+  "versions": [
+    "1.0",
+    "0.3"
+  ],
+  "card": {
+    "source": "upstream",
+    "url": "http://billing:9001/.well-known/agent-card.json",
+    "ttl": "30s"
+  },
+  "capabilities": {
+    "streaming": true,
+    "push_notifications": true
+  }
+}

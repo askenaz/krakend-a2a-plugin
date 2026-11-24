@@ -115,6 +115,6 @@ En Git Bash sobre Windows, escribe el texto de los mensajes sin tildes ni eñes:
 | Ruta | Contenido |
 |---|---|
 | `compose.yml` | Entorno completo: secretos, IdP, agentes, gateway y pruebas |
-| `gateway/settings/a2a.json` | Configuración del gateway y de los agentes para las plantillas del plugin |
+| `gateway/settings/a2a.json` y `gateway/settings/agents/` | Configuración compartida y definiciones de los agentes para las plantillas del plugin |
 | `python/demo/` | Agentes, modelo local, cliente A2A del coordinador y generador de secretos |
 | `pruebas/probar_demo.py` | Pruebas de extremo a extremo contra el gateway |

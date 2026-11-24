@@ -1,0 +1,6 @@
+{
+  "host": "http://billing:9001",
+  "path": "/",
+  "timeout": "10s",
+  "stream_timeout": "120s"
+}
