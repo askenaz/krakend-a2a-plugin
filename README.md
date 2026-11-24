@@ -304,7 +304,7 @@ docker build -f build/community/Dockerfile --target artifacts -o type=local,dest
 docker run --rm --entrypoint sh -v "$PWD/out/community:/p:ro" krakend:2.13.11 /p/check-artifact.sh /p/krakend-a2a-ce-2.13.11.so
 ```
 
-**3. Configurar.** Describe tus agentes en `config/templates/settings/a2a.json` y genera la configuración. Las plantillas colocan en cada endpoint interno la autenticación nativa, la propagación de la identidad y el modificador de autorización.
+**3. Configurar.** Describe tus agentes en `config/templates/settings/a2a.json` y genera la configuración. Las plantillas colocan en cada endpoint interno la autenticación nativa, la propagación de la identidad y el modificador de autorización. El campo `gateway` de cada agente admite además scopes o roles propios del agente y una credencial con la que el gateway se autentica ante él; ver [la guía del plugin](a2a-plugin/README.md#3-configurar).
 
 ```bash
 config/templates/render.sh community https://gw.example.com

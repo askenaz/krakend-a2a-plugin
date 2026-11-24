@@ -28,7 +28,8 @@
         {{ marshal $k }}: {{ marshal $v }},
         {{- end }}
         "auth/validator": {
-          {{- range $k, $v := $s.auth }}
+          {{- /* gateway.auth del agente sustituye claves de auth, solo para este agente. */}}
+          {{- range $k, $v := omit (mergeOverwrite (deepCopy $s.auth) (default (dict) $a.gateway.auth)) "propagate_claims" }}
           {{ marshal $k }}: {{ marshal $v }},
           {{- end }}
           "propagate_claims": [{{ $c := false }}{{ range $k, $h := $s.plugin.identity.headers }}{{ if $c }}, {{ end }}{{ $c = true }}[{{ marshal (index $s.claims $k) }}, {{ marshal $h }}]{{ end }}]
@@ -37,7 +38,8 @@
           "plugins": [ { "name": "a2a-authz", "config": { "agent": {{ marshal $a.id }} } } ]
         }
       },
-      "backend": [ { "host": [{{ marshal $a.gateway.host }}], "url_pattern": {{ marshal $a.gateway.path }}, "encoding": "no-op" } ]
+      "backend": [ { "host": [{{ marshal $a.gateway.host }}], "url_pattern": {{ marshal $a.gateway.path }}, "encoding": "no-op"
+        {{- if $a.gateway.backend_extra_config }}, "extra_config": {{ marshal $a.gateway.backend_extra_config }}{{ end }} } ]
     }
   {{- end }}
   {{- end }}

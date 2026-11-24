@@ -213,6 +213,32 @@ El resultado queda en `out/rendered-community.json` o en `out/rendered-enterpris
 
 KrakenD también puede renderizar las plantillas al arrancar, como en `deploy/compose/`.
 
+El campo `gateway` de cada agente solo lo usan las plantillas; no llega al plugin:
+
+| Campo | Qué hace |
+|---|---|
+| `host`, `path` | Dirección del agente |
+| `timeout`, `stream_timeout` | Tiempo de espera de los endpoints internos `unary` y `stream` |
+| `extra_config` | Componentes de KrakenD en los endpoints internos del agente, como un límite de peticiones |
+| `auth` | Claves de `auth/validator` que sustituyen a las de `auth` solo para este agente. Sirve para exigir scopes o roles por agente |
+| `backend_extra_config` | Componentes de KrakenD en la llamada al agente. Sirve para que el gateway se autentique ante él |
+
+Por ejemplo, para que solo los clientes con `a2a.write` usen un agente, y que el gateway se presente ante él con un token propio de OAuth:
+
+```json
+"gateway": {
+  "host": "https://research.internal", "path": "/", "timeout": "10s", "stream_timeout": "120s",
+  "auth": { "scopes_key": "scope", "scopes": ["a2a.write"], "scopes_matcher": "all" },
+  "backend_extra_config": {
+    "auth/client-credentials": {
+      "client_id": "gateway", "client_secret": "<secreto>", "token_url": "https://idp.example.com/token"
+    }
+  }
+}
+```
+
+Para una cabecera fija, usa `modifier/martian` con `header.Modifier`. Las dos formas funcionan en las dos ediciones, también con streaming. El agente recibe la credencial del gateway, nunca el token del cliente.
+
 Si escribes la configuración a mano:
 
 | | Community 2.13 | Enterprise 3.x |
