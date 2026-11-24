@@ -31,20 +31,25 @@ type renderedEndpoint struct {
 	} `json:"backend"`
 }
 
-// templateSettings es la parte de settings/a2a.json que solo usan las
-// plantillas: la autenticación común y los ajustes de cada agente.
+// templateSettings es la parte de la configuración que solo usan las
+// plantillas: la autenticación común de settings/a2a.json y el gateway de cada
+// agente.
 type templateSettings struct {
 	Auth   map[string]interface{} `json:"auth"`
-	Agents []struct {
-		ID      string `json:"id"`
-		Gateway struct {
-			Auth               map[string]interface{} `json:"auth"`
-			BackendExtraConfig map[string]interface{} `json:"backend_extra_config"`
-		} `json:"gateway"`
-	} `json:"agents"`
+	Agents []templateAgent        `json:"agents"`
 }
 
-const templateSettingsFile = "../templates/settings/a2a.json"
+type templateAgent struct {
+	ID      string          `json:"id"`
+	Gateway templateGateway `json:"gateway"`
+}
+
+type templateGateway struct {
+	Auth               map[string]interface{} `json:"auth"`
+	BackendExtraConfig map[string]interface{} `json:"backend_extra_config"`
+}
+
+const templateSettingsDir = "../templates/settings"
 
 type renderedDoc struct {
 	Version     int                    `json:"version"`
@@ -88,17 +93,48 @@ func checkRendered(t *testing.T, edition string) {
 	}
 }
 
+// readTemplateSettings lee los agentes en las formas que admite el ensamblador
+// del catálogo (config/catalog): la lista agents de a2a.json, un fichero
+// agents/<id>.json o una carpeta agents/<id>/ con agent.json y, si existe,
+// gateway.json.
 func readTemplateSettings(t *testing.T) *templateSettings {
 	t.Helper()
-	raw, err := os.ReadFile(templateSettingsFile)
+	var s templateSettings
+	readJSONFile(t, filepath.Join(templateSettingsDir, "a2a.json"), &s)
+	catalog := filepath.Join(templateSettingsDir, "agents")
+	entries, err := os.ReadDir(catalog)
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		path := filepath.Join(catalog, entry.Name())
+		var a templateAgent
+		switch {
+		case entry.IsDir():
+			readJSONFile(t, filepath.Join(path, "agent.json"), &a)
+			gateway := filepath.Join(path, "gateway.json")
+			if _, err := os.Stat(gateway); err == nil {
+				readJSONFile(t, gateway, &a.Gateway)
+			}
+		case filepath.Ext(entry.Name()) == ".json":
+			readJSONFile(t, path, &a)
+		default:
+			continue
+		}
+		s.Agents = append(s.Agents, a)
+	}
+	return &s
+}
+
+func readJSONFile(t *testing.T, path string, v interface{}) {
+	t.Helper()
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var s templateSettings
-	if err := json.Unmarshal(raw, &s); err != nil {
-		t.Fatalf("%s no es válido: %v", templateSettingsFile, err)
+	if err := json.Unmarshal(raw, v); err != nil {
+		t.Fatalf("%s no es válido: %v", path, err)
 	}
-	return &s
 }
 
 // checkAgentTemplateFields comprueba gateway.auth y gateway.backend_extra_config:
@@ -133,7 +169,7 @@ func checkAgentTemplateFields(t *testing.T, cfg *config.Config, s *templateSetti
 		}
 		return
 	}
-	t.Errorf("%s: el agente %q no está en %s", e.Endpoint, id, templateSettingsFile)
+	t.Errorf("%s: el agente %q no está en %s", e.Endpoint, id, templateSettingsDir)
 }
 
 // a2aBlock extrae el bloque A2A en la forma de cada edición.

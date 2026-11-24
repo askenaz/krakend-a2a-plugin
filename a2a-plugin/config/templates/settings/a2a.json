@@ -45,35 +45,5 @@
       "authorization_servers": ["http://mock-idp:8080"],
       "scopes_supported": ["a2a.read", "a2a.write"]
     }
-  },
-
-  "agents": [
-    {
-      "id": "billing",
-      "versions": ["1.0", "0.3"],
-      "card": { "source": "upstream", "url": "http://billing:9001/.well-known/agent-card.json", "ttl": "30s" },
-      "security": {
-        "schemes": { "bearer": { "httpAuthSecurityScheme": { "scheme": "Bearer", "bearerFormat": "JWT" } } },
-        "requirements": [ { "schemes": { "bearer": { "list": [] } } } ]
-      },
-      "capabilities": { "streaming": true, "push_notifications": true },
-      "gateway": { "host": "http://billing:9001", "path": "/", "timeout": "10s", "stream_timeout": "120s" }
-    },
-    {
-      "id": "research",
-      "versions": ["1.0"],
-      "card": {
-        "source": "upstream",
-        "url": "http://research:9002/.well-known/agent-card.json",
-        "signature": { "verify": true, "jwks_file": "/etc/krakend/a2a/card-signing.jwks.json" }
-      },
-      "capabilities": { "streaming": true },
-      "disabled_operations": ["ListTasks"],
-      "gateway": {
-        "host": "http://research:9002", "path": "/", "timeout": "10s", "stream_timeout": "120s",
-        "extra_config": { "qos/ratelimit/router": { "max_rate": 3 } },
-        "auth": { "scopes_key": "scope", "scopes": ["a2a.write"], "scopes_matcher": "all" }
-      }
-    }
-  ]
+  }
 }

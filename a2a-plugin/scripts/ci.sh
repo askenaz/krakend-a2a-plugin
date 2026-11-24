@@ -34,11 +34,11 @@ builder_tests() { # imagen
 step "Versiones: Community $KRAKEND_CE_VERSION y Enterprise $KRAKEND_EE_VERSION"
 
 step "Formato"
-unformatted=$(gofmt -l core plugin config/conformance deploy e2e 2>/dev/null || true)
+unformatted=$(gofmt -l core plugin config/catalog config/conformance deploy e2e 2>/dev/null || true)
 if [ -n "$unformatted" ]; then echo "Sin formatear:"; echo "$unformatted"; exit 1; fi
 
 step "go vet y pruebas con el Go local ($(go version | awk '{print $3}'))"
-for m in core plugin config/conformance; do
+for m in core plugin config/catalog config/conformance; do
   (cd "$m" && go vet ./... && go test -count=1 ./...)
 done
 
@@ -46,6 +46,11 @@ step "Las pruebas de extremo a extremo compilan"
 # No se ejecutan aquí: necesitan el entorno de deploy/compose levantado.
 # Compilarlas detecta, en un clon limpio, un paquete que no haya llegado a git.
 (cd e2e && go vet ./...)
+
+step "Plantillas de Community y Enterprise"
+bash config/templates/render.sh community
+bash config/templates/render.sh enterprise
+(cd config/conformance && go test -count=1 -run '^TestRenderedTemplates$')
 
 step "El núcleo no tiene dependencias externas"
 deps=$(cd core && go list -m all | grep -v '^krakend-a2a.local/core$' || true)

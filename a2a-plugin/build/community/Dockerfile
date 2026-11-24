@@ -15,7 +15,14 @@
 
 ARG KRAKEND_VERSION=2.13.11
 
-FROM krakend/builder:${KRAKEND_VERSION} AS build
+FROM krakend/builder:${KRAKEND_VERSION} AS builder
+
+FROM builder AS catalog
+WORKDIR /src/catalog
+COPY config/catalog/ ./
+RUN CGO_ENABLED=0 go build -o /a2a-catalog .
+
+FROM builder AS build
 ARG KRAKEND_VERSION
 ARG PLUGIN_VERSION=0.1.0
 WORKDIR /src
@@ -50,7 +57,11 @@ RUN set -eu; \
 FROM scratch AS artifacts
 COPY --from=build /out/ /
 
-FROM krakend:${KRAKEND_VERSION}
+FROM krakend:${KRAKEND_VERSION} AS config-renderer
+COPY --from=catalog /a2a-catalog /usr/local/bin/a2a-catalog
+COPY --chmod=755 config/templates/run.sh /usr/local/bin/a2a-config
+
+FROM config-renderer
 ARG KRAKEND_VERSION
 LABEL maintainer="Autores del plugin A2A para KrakenD"
 COPY --from=build /out/ /opt/krakend/plugins/

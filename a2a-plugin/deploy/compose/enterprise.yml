@@ -24,7 +24,7 @@ x-gateway: &gateway
     dockerfile: build/enterprise/Dockerfile
     args: { KRAKEND_VERSION: "${KRAKEND_EE_VERSION:-3.0.4}" }
   image: krakend-a2a:ee-${KRAKEND_EE_VERSION:-3.0.4}
-  command: ["run", "-c", "/etc/krakend/krakend.tmpl"]
+  command: ["/usr/local/bin/a2a-config", "run", "-c", "/etc/krakend/krakend.tmpl"]
   environment:
     FC_ENABLE: "1"
     FC_SETTINGS: /etc/krakend/settings

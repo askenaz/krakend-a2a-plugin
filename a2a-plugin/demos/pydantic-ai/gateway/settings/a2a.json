@@ -34,32 +34,5 @@
       "authorization_servers": ["http://mock-idp:8080"],
       "scopes_supported": ["a2a.read", "a2a.write"]
     }
-  },
-
-  "agents": [
-    {
-      "id": "soporte",
-      "versions": ["1.0", "0.3"],
-      "card": { "source": "upstream", "url": "http://soporte:8000/.well-known/agent-card.json", "ttl": "30s" },
-      "security": {
-        "schemes": { "bearer": { "httpAuthSecurityScheme": { "scheme": "Bearer", "bearerFormat": "JWT" } } },
-        "requirements": [ { "schemes": { "bearer": { "list": [] } } } ]
-      },
-      "capabilities": { "streaming": true },
-      "disabled_operations": ["ListTasks"],
-      "gateway": { "host": "http://soporte:8000", "path": "/", "timeout": "30s", "stream_timeout": "120s" }
-    },
-    {
-      "id": "coordinador",
-      "versions": ["1.0", "0.3"],
-      "card": { "source": "upstream", "url": "http://coordinador:8000/.well-known/agent-card.json", "ttl": "30s" },
-      "security": {
-        "schemes": { "bearer": { "httpAuthSecurityScheme": { "scheme": "Bearer", "bearerFormat": "JWT" } } },
-        "requirements": [ { "schemes": { "bearer": { "list": [] } } } ]
-      },
-      "capabilities": { "streaming": true },
-      "disabled_operations": ["ListTasks"],
-      "gateway": { "host": "http://coordinador:8000", "path": "/", "timeout": "30s", "stream_timeout": "120s" }
-    }
-  ]
+  }
 }

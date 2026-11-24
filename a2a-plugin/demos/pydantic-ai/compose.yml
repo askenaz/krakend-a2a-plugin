@@ -73,7 +73,7 @@ services:
       dockerfile: build/community/Dockerfile
       args: { KRAKEND_VERSION: "${KRAKEND_CE_VERSION:-2.13.11}" }
     image: krakend-a2a:ce-${KRAKEND_CE_VERSION:-2.13.11}
-    command: ["run", "-c", "/etc/krakend/krakend.tmpl"]
+    command: ["/usr/local/bin/a2a-config", "run", "-c", "/etc/krakend/krakend.tmpl"]
     environment:
       FC_ENABLE: "1"
       FC_SETTINGS: /etc/krakend/settings
