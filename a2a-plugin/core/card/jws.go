@@ -18,6 +18,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,9 +30,10 @@ type KeySet struct {
 	keys map[string]crypto.PublicKey
 }
 
-// LoadKeySet lee un fichero JWKS.
+// LoadKeySet lee un fichero JWKS. La ruta viene de la configuración del
+// operador, no de la petición.
 func LoadKeySet(path string) (*KeySet, error) {
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("no se puede leer el JWKS %s: %w", path, err)
 	}

@@ -6,7 +6,11 @@ The plugin loads into the official KrakenD Community 2.13.11 binary.
 
 ## Community 2.13 security status
 
-Community 3.x removed support for Go plugins. Community 2.13.11 is the final Community release that loads them. The 2.13 line no longer receives security fixes. Put a maintained load balancer or WAF in front of it and follow KrakenD's security notices. [Compatibility matrix](compatibility.md)
+Community 3.x removed support for Go plugins. Community 2.13.11 is the final Community release that loads them. The 2.13 line no longer receives security fixes.
+
+Community 2.13.11 is built with Go 1.26.8. As of November 24, 2026, govulncheck reports eleven vulnerabilities in that standard library, fixed in Go 1.26.9 through 1.26.11: eight in `net/http` and one each in `crypto/tls`, `crypto/x509`, and `mime/multipart`. The plugin cannot avoid them, because a Go plugin only loads when it is built with the same Go version as KrakenD. Enterprise 3.0.4, built with Go 1.27.4, has none.
+
+Put a maintained load balancer or WAF in front of it and follow KrakenD's security notices. [Compatibility matrix](compatibility.md)
 
 ## Build
 

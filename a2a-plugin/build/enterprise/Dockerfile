@@ -29,7 +29,7 @@ COPY core ./core
 COPY plugin ./plugin
 COPY build/check-artifact.sh /out/check-artifact.sh
 WORKDIR /src/plugin
-RUN go vet ./... && go test -count=1 ./... && cd ../core && go vet ./... && go test -count=1 ./...
+RUN go vet ./... && go test -count=1 ./... && go -C ../core vet ./... && go -C ../core test -count=1 ./...
 RUN set -eu; \
     name="krakend-a2a-ee-${KRAKEND_VERSION}"; \
     go build -buildmode=plugin -ldflags "-X main.Version=${PLUGIN_VERSION}" -o "/out/${name}.so" .; \
@@ -63,3 +63,6 @@ ARG KRAKEND_VERSION
 LABEL maintainer="Autores del plugin A2A para KrakenD"
 COPY --from=build /out/ /opt/krakend/plugins/
 RUN sh /opt/krakend/plugins/check-artifact.sh "/opt/krakend/plugins/krakend-a2a-ee-${KRAKEND_VERSION}.so"
+# El contenedor arranca sin privilegios, con el usuario krakend de la imagen
+# oficial. Va en número para que Kubernetes pueda comprobar runAsNonRoot.
+USER 1000

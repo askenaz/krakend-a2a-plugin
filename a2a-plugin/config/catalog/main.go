@@ -5,8 +5,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -34,12 +37,40 @@ func main() {
 	}
 }
 
+// settingsDir reads only inside the settings directory. Symbolic links that
+// stay inside it work, as in Kubernetes ConfigMap volumes. A link that leads
+// outside it is an error, so the catalog never reads other files.
+type settingsDir struct {
+	dir  string
+	fsys fs.FS
+}
+
+// path is the name shown in messages for a slash-separated name inside dir.
+func (s settingsDir) path(name string) string {
+	return filepath.Join(s.dir, filepath.FromSlash(name))
+}
+
+func (s settingsDir) readFile(name string) ([]byte, error) {
+	data, err := fs.ReadFile(s.fsys, name)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", s.path(name), err)
+	}
+	return data, nil
+}
+
 func assemble(dir string) (object, error) {
-	global := filepath.Join(dir, "a2a.json")
-	settings, err := readObject(global)
+	root, err := os.OpenRoot(dir)
 	if err != nil {
 		return nil, err
 	}
+	defer root.Close()
+	s := settingsDir{dir: dir, fsys: root.FS()}
+
+	settings, err := s.readObject("a2a.json")
+	if err != nil {
+		return nil, err
+	}
+	global := s.path("a2a.json")
 
 	agents := make([]object, 0)
 	sources := make(map[string]string)
@@ -71,24 +102,23 @@ func assemble(dir string) (object, error) {
 		}
 	}
 
-	catalog := filepath.Join(dir, "agents")
-	entries, err := os.ReadDir(catalog)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
+	entries, err := fs.ReadDir(s.fsys, "agents")
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("%s: %w", s.path("agents"), err)
 	}
 	for _, entry := range entries {
-		path := filepath.Join(catalog, entry.Name())
+		name := path.Join("agents", entry.Name())
 		id := entry.Name()
 		var agent object
 		switch {
 		case entry.IsDir():
-			path = filepath.Join(path, "agent.json")
-			agent, err = readAgentFolder(path)
+			name = path.Join(name, "agent.json")
+			agent, err = s.readAgentFolder(name)
 		case filepath.Ext(id) == ".json":
 			id = strings.TrimSuffix(id, ".json")
-			agent, err = readObject(path)
+			agent, err = s.readObject(name)
 			if err == nil {
-				err = checkAgentFields(path, agent)
+				err = checkAgentFields(s.path(name), agent)
 			}
 		default:
 			continue
@@ -97,9 +127,9 @@ func assemble(dir string) (object, error) {
 			return nil, err
 		}
 		if !agentID.MatchString(id) {
-			return nil, fmt.Errorf("%s: invalid agent file or directory name %q", path, id)
+			return nil, fmt.Errorf("%s: invalid agent file or directory name %q", s.path(name), id)
 		}
-		if err := add(agent, id, path); err != nil {
+		if err := add(agent, id, s.path(name)); err != nil {
 			return nil, err
 		}
 	}
@@ -114,40 +144,40 @@ func assemble(dir string) (object, error) {
 	return settings, nil
 }
 
-func readAgentFolder(manifest string) (object, error) {
-	agent, err := readObject(manifest)
+func (s settingsDir) readAgentFolder(manifest string) (object, error) {
+	agent, err := s.readObject(manifest)
 	if err != nil {
 		return nil, err
 	}
-	if err := checkAgentFields(manifest, agent); err != nil {
+	if err := checkAgentFields(s.path(manifest), agent); err != nil {
 		return nil, err
 	}
-	dir := filepath.Dir(manifest)
-	entries, err := os.ReadDir(dir)
+	folder := path.Dir(manifest)
+	entries, err := fs.ReadDir(s.fsys, folder)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", s.path(folder), err)
 	}
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() || name == "agent.json" || filepath.Ext(name) != ".json" {
 			continue
 		}
-		path := filepath.Join(dir, name)
+		file := path.Join(folder, name)
 		field := strings.TrimSuffix(name, ".json")
 		if !slices.Contains(sections, field) {
-			return nil, fmt.Errorf("%s: unknown agent section %q", path, field)
+			return nil, fmt.Errorf("%s: unknown agent section %q", s.path(file), field)
 		}
 		if _, exists := agent[field]; exists {
-			return nil, fmt.Errorf("agent section %q is defined in both %s and %s", field, manifest, path)
+			return nil, fmt.Errorf("agent section %q is defined in both %s and %s", field, s.path(manifest), s.path(file))
 		}
-		raw, err := os.ReadFile(path)
+		raw, err := s.readFile(file)
 		if err != nil {
 			return nil, err
 		}
 		if !json.Valid(raw) {
-			return nil, fmt.Errorf("%s: invalid JSON", path)
+			return nil, fmt.Errorf("%s: invalid JSON", s.path(file))
 		}
-		if err := checkSection(path, field, raw); err != nil {
+		if err := checkSection(s.path(file), field, raw); err != nil {
 			return nil, err
 		}
 		agent[field] = raw
@@ -155,22 +185,22 @@ func readAgentFolder(manifest string) (object, error) {
 	return agent, nil
 }
 
-func checkAgentFields(path string, agent object) error {
+func checkAgentFields(source string, agent object) error {
 	for field, value := range agent {
 		if field == "id" {
 			continue
 		}
 		if !slices.Contains(sections, field) {
-			return fmt.Errorf("%s: unknown agent field %q", path, field)
+			return fmt.Errorf("%s: unknown agent field %q", source, field)
 		}
-		if err := checkSection(path, field, value); err != nil {
+		if err := checkSection(source, field, value); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func checkSection(path, field string, raw json.RawMessage) error {
+func checkSection(source, field string, raw json.RawMessage) error {
 	expected := byte('{')
 	shape := "an object"
 	if field == "versions" || field == "disabled_operations" {
@@ -179,22 +209,22 @@ func checkSection(path, field string, raw json.RawMessage) error {
 	}
 	// Values from both sources have already passed JSON decoding.
 	if bytes.TrimSpace(raw)[0] != expected {
-		return fmt.Errorf("%s: %s must be %s", path, field, shape)
+		return fmt.Errorf("%s: %s must be %s", source, field, shape)
 	}
 	return nil
 }
 
-func readObject(path string) (object, error) {
-	data, err := os.ReadFile(path)
+func (s settingsDir) readObject(name string) (object, error) {
+	data, err := s.readFile(name)
 	if err != nil {
 		return nil, err
 	}
 	var value object
 	if err := json.Unmarshal(data, &value); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return nil, fmt.Errorf("%s: %w", s.path(name), err)
 	}
 	if value == nil {
-		return nil, fmt.Errorf("%s: expected a JSON object", path)
+		return nil, fmt.Errorf("%s: expected a JSON object", s.path(name))
 	}
 	return value, nil
 }
