@@ -20,8 +20,10 @@ import (
 //     poder registrar la propiedad, reescribir la card extendida o sustituir
 //     la respuesta si la autorización denegó.
 //   - Los flujos SSE se retienen solo hasta el primer evento, que registra la
-//     propiedad antes de llegar al cliente. Después pasan sin analizar, con
-//     flush en cada escritura (supuesto S2 validado en la fase 0).
+//     propiedad antes de llegar al cliente. Los bloques sin datos que lo
+//     preceden, como los comentarios de keepalive, se entregan al momento.
+//     Después del primer evento el flujo pasa sin analizar, con flush en cada
+//     escritura (supuesto S2 validado en la fase 0).
 type recorder struct {
 	w     http.ResponseWriter
 	g     *Gateway
@@ -35,6 +37,7 @@ type recorder struct {
 	mode        int
 	buf         bytes.Buffer
 	committed   bool // cabeceras ya enviadas al cliente
+	firstEvent  bool // primer evento SSE ya tratado
 	sent        int  // estado HTTP enviado al cliente
 	blocked     *verdict
 	overflowed  bool
@@ -103,22 +106,37 @@ func (r *recorder) writeBuffered(p []byte) (int, error) {
 }
 
 func (r *recorder) writeStream(p []byte) (int, error) {
-	if r.committed {
+	if r.firstEvent {
 		return r.passThrough(p)
 	}
 	r.buf.Write(p)
-	end := eventEnd(r.buf.Bytes())
-	switch {
-	case end >= 0:
-		r.handleFirstEvent(r.buf.Bytes()[:end])
-		r.commitStream()
-	case int64(r.buf.Len()) > r.limit:
+	for {
+		end := eventEnd(r.buf.Bytes())
+		if end < 0 {
+			break
+		}
+		if data, ok := sseData(r.buf.Bytes()[:end]); ok {
+			r.handleFirstEvent(data)
+			r.commitStream()
+			return len(p), nil
+		}
+		// Un bloque sin campo data no es un evento: un comentario de
+		// keepalive, o solo retry: o id:. Se entrega ya, para que el keepalive
+		// cumpla su función, y se sigue esperando al primer evento.
+		r.forwardBlock(end)
+	}
+	if int64(r.buf.Len()) > r.limit {
 		r.g.log.Warning(logAgent, r.e.agent.id, " primer evento SSE demasiado grande: no se registra la propiedad")
 		r.commitStream()
-	default:
-		// Falta el resto del primer evento.
 	}
 	return len(p), nil
+}
+
+// forwardBlock entrega al cliente los n primeros bytes retenidos.
+func (r *recorder) forwardBlock(n int) {
+	r.commitStreamHeaders()
+	_, _ = r.w.Write(r.buf.Next(n))
+	r.flushUnderlying()
 }
 
 // Flush mantiene la capacidad de flush del pipeline (KrakenD Enterprise la usa
@@ -180,19 +198,29 @@ func (r *recorder) overflow() {
 	r.mode = modePass
 }
 
+// commitStream deja de retener el flujo: entrega lo pendiente, y el resto
+// pasará sin analizar.
 func (r *recorder) commitStream() {
-	r.hdr.Del(headerContentLength)
-	r.commitHeaders(r.status)
+	r.firstEvent = true
+	r.commitStreamHeaders()
 	_, _ = r.w.Write(r.buf.Bytes())
 	r.buf.Reset()
 	r.flushUnderlying()
 }
 
-func (r *recorder) handleFirstEvent(event []byte) {
+func (r *recorder) commitStreamHeaders() {
+	if r.committed {
+		return
+	}
+	r.hdr.Del(headerContentLength)
+	r.commitHeaders(r.status)
+}
+
+// handleFirstEvent registra la propiedad con los datos del primer evento.
+func (r *recorder) handleFirstEvent(data []byte) {
 	if !r.e.op.MayCreateTask() || !r.e.agent.ownership {
 		return
 	}
-	data := sseData(event)
 	resp, err := protocol.ParseResponse(data)
 	if err != nil || resp.Error != nil {
 		return
@@ -210,7 +238,7 @@ func (r *recorder) finish() string {
 	case modePass:
 		return "ok-sin-inspeccionar"
 	case modeStream:
-		if !r.committed {
+		if !r.firstEvent {
 			r.commitStream()
 		}
 		return "ok-streaming"
@@ -382,16 +410,19 @@ func eventEnd(b []byte) int {
 	return best
 }
 
-// sseData une las líneas data: de un evento SSE.
-func sseData(event []byte) []byte {
+// sseData une los campos data de un bloque SSE. ok es false si el bloque no
+// tiene ninguno: según la especificación de SSE, entonces no es un evento.
+func sseData(block []byte) (data []byte, ok bool) {
 	var parts []string
-	sc := bufio.NewScanner(bytes.NewReader(event))
-	sc.Buffer(make([]byte, 64*1024), len(event)+1)
+	sc := bufio.NewScanner(bytes.NewReader(block))
+	sc.Buffer(make([]byte, 64*1024), len(block)+1)
 	for sc.Scan() {
 		line := strings.TrimRight(sc.Text(), "\r")
-		if v, ok := strings.CutPrefix(line, "data:"); ok {
+		if line == "data" {
+			parts = append(parts, "")
+		} else if v, found := strings.CutPrefix(line, "data:"); found {
 			parts = append(parts, strings.TrimPrefix(v, " "))
 		}
 	}
-	return []byte(strings.Join(parts, "\n"))
+	return []byte(strings.Join(parts, "\n")), len(parts) > 0
 }

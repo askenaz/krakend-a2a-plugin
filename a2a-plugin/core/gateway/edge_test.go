@@ -177,6 +177,30 @@ func TestInternalRoutesBlocked(t *testing.T) {
 }
 
 // Escenarios: entrega incremental y cliente desconectado.
+// Un bloque SSE solo es un evento si tiene algún campo data.
+func TestSSEData(t *testing.T) {
+	cases := []struct {
+		block, data string
+		ok          bool
+	}{
+		{": ping\n\n", "", false},
+		{"retry: 1000\n\n", "", false},
+		{"id: 7\nevent: x\n\n", "", false},
+		{"\n\n", "", false},
+		{"data: {\"a\":1}\n\n", `{"a":1}`, true},
+		{"data:{\"a\":1}\r\n\r\n", `{"a":1}`, true},
+		{": ping\ndata: x\n\n", "x", true},
+		{"data: a\ndata: b\n\n", "a\nb", true},
+		{"data\n\n", "", true},
+	}
+	for _, c := range cases {
+		data, ok := sseData([]byte(c.block))
+		if string(data) != c.data || ok != c.ok {
+			t.Errorf("sseData(%q) = %q, %v; se esperaba %q, %v", c.block, data, ok, c.data, c.ok)
+		}
+	}
+}
+
 func TestStreaming(t *testing.T) {
 	h := newHarness(t, baseConfig)
 	req, _ := http.NewRequest(http.MethodPost, h.srv.URL+"/a2a/billing",
