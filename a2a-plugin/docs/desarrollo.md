@@ -169,6 +169,23 @@ SONAR_TOKEN=<token> bash scripts/sonar.sh
 
 El proyecto se analiza con todas las reglas de Go y de Dockerfile activas. El análisis debe terminar con el quality gate en verde, sin incidencias ni hotspots de seguridad.
 
+## Análisis de seguridad
+
+Además de SonarQube, el código que se compila (`core`, `plugin` y `config/catalog`) y las imágenes se revisan con estas herramientas. Las versiones son las de la última revisión, el 24 de noviembre de 2026. Los comandos se ejecutan desde `a2a-plugin`.
+
+| Herramienta | Qué revisa | Comando |
+|---|---|---|
+| gosec 2.30.0 | Errores de seguridad en el código Go | `go run github.com/securego/gosec/v2/cmd/gosec@v2.30.0 ./...` en `core`, `plugin` y `config/catalog` |
+| govulncheck 1.10.0 | Vulnerabilidades conocidas que alcanza el código, con el Go de cada edición | `docker run --rm -v "$PWD:/src:ro" -w /src/core --entrypoint sh krakend/builder:2.13.11 -c 'go run golang.org/x/vuln/cmd/govulncheck@v1.10.0 ./...'`, también en `plugin` y `config/catalog` y con `krakend/builder-ee:3.0.4` |
+| Trivy 0.76.2 | Dependencias vulnerables, Dockerfiles y secretos | `docker run --rm -v "$PWD:/src:ro" aquasec/trivy:0.76.2 fs --scanners vuln,misconfig,secret --skip-dirs /src/deploy/.secrets --skip-dirs /src/out /src` |
+| Semgrep 1.185.0 | Reglas de Go, OWASP Top 10, Dockerfile y secretos | `docker run --rm -v "$PWD:/src:ro" -w /src semgrep/semgrep:1.185.0 semgrep scan --metrics=off --config p/golang --config p/owasp-top-ten --config p/dockerfile --config p/secrets --exclude .secrets --exclude out` |
+
+Ninguna encuentra incidencias en el código que se compila. Lo que queda es conocido:
+
+- **govulncheck en Community.** Encuentra las vulnerabilidades de la biblioteca estándar de Go 1.26.8 que explica la [guía de Community](community.md). En `config/catalog` señala además GO-2026-6604, que solo afecta a Windows; el catálogo se ejecuta en la imagen de Linux. Enterprise no tiene ninguna.
+- **Trivy, `HEALTHCHECK`.** Las imágenes no la declaran: depende del puerto y de la configuración de cada despliegue, así que la definen Compose o el orquestador.
+- **Semgrep, servidores sin TLS.** Son el IdP simulado y los agentes de la demostración, que solo hablan dentro de la red de Docker.
+
 ## Sitio de documentación
 
 Desde `a2a-plugin/site`, ejecuta `npm ci`, `npm run build` y `npm run preview`. Actualiza juntas las páginas Markdown en español e inglés. El sitio estático queda en `a2a-plugin/out/docs-site/`.

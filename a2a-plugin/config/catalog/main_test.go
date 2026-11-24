@@ -98,6 +98,38 @@ func TestInlineOnly(t *testing.T) {
 	}
 }
 
+// Links inside the settings directory work, as in a Kubernetes ConfigMap
+// volume. A link that leads outside it is rejected without reading the target.
+func TestSymlinks(t *testing.T) {
+	dir := fixture(t, map[string]string{
+		"shared/billing.json": `{"id":"billing"}`,
+		"agents/.keep":        ``,
+	})
+	link := filepath.Join(dir, "agents", "billing.json")
+	if err := os.Symlink(filepath.Join("..", "shared", "billing.json"), link); err != nil {
+		t.Skipf("symbolic links are not available: %v", err)
+	}
+	settings, err := assemble(dir)
+	if err != nil {
+		t.Fatalf("a link inside the settings directory must work: %v", err)
+	}
+	if string(settings["agents"]) != `[{"id":"billing"}]` {
+		t.Fatalf("unexpected catalog: %s", settings["agents"])
+	}
+
+	outside := filepath.Join(t.TempDir(), "research.json")
+	if err := os.WriteFile(outside, []byte(`{"id":"research"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(dir, "agents", "research.json")); err != nil {
+		t.Fatal(err)
+	}
+	_, err = assemble(dir)
+	if err == nil || !strings.Contains(err.Error(), "research.json") {
+		t.Fatalf("a link outside the settings directory must be rejected, got %v", err)
+	}
+}
+
 func fixture(t *testing.T, files map[string]string) string {
 	t.Helper()
 	dir := t.TempDir()

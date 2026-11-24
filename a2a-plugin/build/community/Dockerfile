@@ -32,7 +32,7 @@ COPY build/check-artifact.sh /out/check-artifact.sh
 WORKDIR /src/plugin
 # Las pruebas se ejecutan con el compilador exacto de esta edición: un uso de
 # API posterior a su versión de Go rompe aquí la construcción.
-RUN go vet ./... && go test -count=1 ./... && cd ../core && go vet ./... && go test -count=1 ./...
+RUN go vet ./... && go test -count=1 ./... && go -C ../core vet ./... && go -C ../core test -count=1 ./...
 RUN set -eu; \
     name="krakend-a2a-ce-${KRAKEND_VERSION}"; \
     go build -buildmode=plugin -ldflags "-X main.Version=${PLUGIN_VERSION}" -o "/out/${name}.so" .; \
@@ -76,3 +76,6 @@ RUN set -eu; \
     krakend check-plugin -g "$gov" -l "$libc" -s /tmp/go.sum; \
     rm -f /tmp/go.sum; \
     krakend test-plugin -sm "$so"
+# El contenedor arranca sin privilegios, con el usuario krakend de la imagen
+# oficial. Va en número para que Kubernetes pueda comprobar runAsNonRoot.
+USER 1000

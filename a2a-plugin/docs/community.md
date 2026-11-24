@@ -11,6 +11,7 @@ KrakenD Community 3.0 eliminó el soporte de plugins Go. La 2.13.11 es la últim
 - No ha recibido versiones desde el 8 de septiembre de 2026.
 - Las correcciones de seguridad del 12 de noviembre de 2026 salieron para Community 3.0.4 y Enterprise 2.13.14, no para Community 2.13.
 - No hay fecha de fin de vida publicada.
+- Está compilada con Go 1.26.8. A 24 de noviembre de 2026, govulncheck encuentra en esa biblioteca estándar once vulnerabilidades, corregidas en Go 1.26.9 a 1.26.11: ocho en `net/http` y una en `crypto/tls`, otra en `crypto/x509` y otra en `mime/multipart`. El plugin no puede evitarlas, porque un plugin Go solo carga si se compila con el mismo Go que KrakenD. Enterprise 3.0.4, con Go 1.27.4, no tiene ninguna.
 
 **No expongas KrakenD Community 2.13 directamente a internet.** Ponle delante una capa que sí reciba correcciones, como un balanceador o un WAF gestionado, y vigila los avisos de seguridad de KrakenD.
 
