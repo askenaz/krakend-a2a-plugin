@@ -36,6 +36,7 @@ var versionHistory = []string{
 // Ficheros de fuera de a2a-plugin que también se revisan, si existen.
 var versionExtraFiles = []string{
 	pluginRoot + "/../README.md",
+	pluginRoot + "/../README.es.md",
 	pluginRoot + "/../.github/workflows/a2a-plugin.yml",
 }
 

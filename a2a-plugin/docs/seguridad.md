@@ -1,5 +1,7 @@
 # Modelo de seguridad
 
+[Índice de guías](README.md) · [Read in English](en/security.md)
+
 Este documento explica qué protege el plugin A2A, qué deja en manos de KrakenD y qué queda fuera de su alcance.
 
 ## Reparto de responsabilidades

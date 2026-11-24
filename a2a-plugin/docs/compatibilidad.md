@@ -1,5 +1,7 @@
 # Matriz de compatibilidad
 
+[Índice de guías](README.md) · [Read in English](en/compatibility.md)
+
 Versión del plugin: **0.1.0**. Verificada el 13 de noviembre de 2026. Enterprise 3.0.5 se verificó el 22 de noviembre de 2026 con el mismo código.
 
 ## KrakenD
