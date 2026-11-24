@@ -1,5 +1,7 @@
 # Instalación en KrakenD Community
 
+[Índice de guías](README.md) · [Read in English](en/community.md)
+
 El plugin se carga en el binario oficial de KrakenD Community 2.13.11, sin modificarlo.
 
 ## Aviso sobre la línea 2.13
@@ -48,7 +50,7 @@ Un artefacto de Enterprise en Community, o al revés, se rechaza con las discrep
 
 ## 3. Configurar
 
-Con las plantillas:
+Define los agentes según la [guía del catálogo](agentes.md) y ejecuta:
 
 ```bash
 config/templates/render.sh community https://gw.example.com

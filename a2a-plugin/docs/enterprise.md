@@ -1,5 +1,7 @@
 # Instalación en KrakenD Enterprise
 
+[Índice de guías](README.md) · [Read in English](en/enterprise.md)
+
 El plugin se carga en el binario oficial de KrakenD Enterprise 3.0.4 o superior, sin modificarlo. Cada versión de Enterprise necesita un artefacto compilado con su imagen de compilación.
 
 ## 1. Construir
@@ -42,13 +44,13 @@ La imagen `krakend-a2a:ee-3.0.4` no contiene ninguna licencia.
 
 ## 3. Configurar
 
-La forma recomendada es generar la configuración con las plantillas, a partir de la lista de agentes de `config/templates/settings/a2a.json`. Así cada endpoint interno lleva la autenticación nativa, la propagación de identidad y el modificador de autorización.
+Genera la configuración con las plantillas y el [catálogo de agentes](agentes.md). Así cada endpoint interno lleva la autenticación nativa, la propagación de identidad y el modificador de autorización.
 
 ```bash
 config/templates/render.sh enterprise https://gw.example.com
 ```
 
-El resultado queda en `out/rendered-enterprise.json`. En ejecución, KrakenD también puede renderizar las plantillas al arrancar, como en `deploy/compose/enterprise.yml`.
+El resultado queda en `out/rendered-enterprise.json`. El ejemplo de `deploy/compose/enterprise.yml` ensambla el catálogo y renderiza al arrancar.
 
 Si escribes la configuración a mano, en Enterprise 3.x:
 

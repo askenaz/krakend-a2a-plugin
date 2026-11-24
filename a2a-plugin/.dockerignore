@@ -21,3 +21,4 @@ out/
 # --- Solo para contextos de Docker ---
 .git
 **/out/
+site/

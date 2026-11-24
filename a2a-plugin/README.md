@@ -1,5 +1,7 @@
 # Plugin A2A para KrakenD
 
+[English documentation](docs/en/README.md) · [Documentación en español](docs/README.md)
+
 [![Licencia MIT](https://img.shields.io/badge/licencia-MIT-blue)](../COPYING)
 ![A2A 1.0 y 0.3](https://img.shields.io/badge/A2A-1.0%20%7C%200.3-informational)
 ![KrakenD Community 2.13.11 y Enterprise 3.0.4](https://img.shields.io/badge/KrakenD-CE%202.13.11%20%7C%20EE%203.0.4-orange)
@@ -196,7 +198,7 @@ La imagen `krakend-a2a:ee-3.0.4` no contiene ninguna licencia.
 
 ### 3. Configurar
 
-Lo recomendado es generar la configuración con las plantillas. Describe tus agentes en `config/templates/settings/a2a.json` y ejecuta:
+Guarda la configuración compartida en `config/templates/settings/a2a.json` y define cada agente en un archivo o carpeta dentro de `config/templates/settings/agents/`. Sigue la [guía del catálogo de agentes](docs/agentes.md) y ejecuta:
 
 ```bash
 config/templates/render.sh community https://gw.example.com
@@ -211,7 +213,7 @@ El resultado queda en `out/rendered-community.json` o en `out/rendered-enterpris
 - El borde `a2a-gateway`.
 - Por cada agente, sus endpoints internos, con la autenticación nativa, la propagación de la identidad y el modificador `a2a-authz`.
 
-KrakenD también puede renderizar las plantillas al arrancar, como en `deploy/compose/`.
+Los ejemplos de `deploy/compose/` ensamblan el catálogo y renderizan las plantillas al arrancar.
 
 El campo `gateway` de cada agente solo lo usan las plantillas; no llega al plugin:
 
@@ -382,7 +384,7 @@ El plugin se configura con un único bloque JSON, idéntico en las dos ediciones
   "agents": [
     {
       "id": "billing",
-      "card": { "source": "upstream", "url": "http://billing.internal:8080/.well-known/agent-card.json" }
+      "card": { "source": "upstream", "url": "https://billing.example.com/.well-known/agent-card.json" }
     }
   ]
 }
@@ -505,15 +507,7 @@ Estado verificado en las dos ediciones; la última ronda completa fue el 20 de n
 
 ## Documentación
 
-| Documento | Contenido |
-|---|---|
-| [docs/configuracion.md](docs/configuracion.md) | Referencia del bloque de configuración |
-| [docs/seguridad.md](docs/seguridad.md) | Modelo de seguridad y límites |
-| [docs/community.md](docs/community.md) | Instalación en Community 2.13 y aviso de soporte |
-| [docs/enterprise.md](docs/enterprise.md) | Instalación en Enterprise 3.0 |
-| [docs/compatibilidad.md](docs/compatibilidad.md) | Versiones verificadas |
-| [docs/desarrollo.md](docs/desarrollo.md) | Desarrollo, pruebas, SonarQube y licencia de Enterprise |
-| [docs/validacion-supuestos.md](docs/validacion-supuestos.md) | Resultados de la fase 0 |
+Consulta el índice de guías de instalación, catálogo de agentes, configuración, seguridad, compatibilidad y desarrollo. [Español](docs/README.md) · [English](docs/en/README.md)
 
 ## Estructura
 

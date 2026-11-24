@@ -1,6 +1,8 @@
 # Configuración del plugin A2A
 
-El plugin se configura con un único bloque JSON. El bloque es idéntico en KrakenD Community 2.13 y en Enterprise 3.0. Lo que cambia es el fichero que lo envuelve.
+[Índice de guías](README.md) · [Read in English](en/configuration.md)
+
+Las plantillas ensamblan la configuración compartida y el [catálogo de agentes](agentes.md) en el bloque JSON que recibe el plugin. El bloque es idéntico en KrakenD Community 2.13 y en Enterprise 3.0. Lo que cambia es el fichero que lo envuelve.
 
 El esquema JSON del bloque está en `a2a-plugin/config/schema/a2a-gateway.schema.json`. Los ejemplos válidos e inválidos están en `a2a-plugin/config/examples/`.
 
@@ -45,7 +47,7 @@ Enterprise 3.0, con `version: 4`. El bloque va en el campo `config` del plugin:
   "agents": [
     {
       "id": "billing",
-      "card": { "source": "upstream", "url": "http://billing.internal:8080/.well-known/agent-card.json" }
+      "card": { "source": "upstream", "url": "https://billing.example.com/.well-known/agent-card.json" }
     }
   ]
 }

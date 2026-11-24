@@ -1,5 +1,7 @@
 # Validación de supuestos · fase 0
 
+[Índice de guías](README.md) · [Read in English](en/validation.md)
+
 Fecha: 13 de noviembre de 2026.
 Cambio: `add-a2a-gateway-plugin`, grupo 2 de `tasks.md`.
 

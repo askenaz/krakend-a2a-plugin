@@ -1,5 +1,7 @@
 # Guía de desarrollo
 
+[Índice de guías](README.md) · [Read in English](en/development.md)
+
 ## Requisitos
 
 - Docker con Docker Compose.
@@ -128,6 +130,7 @@ En Git Bash, los volúmenes de `docker run` necesitan `MSYS_NO_PATHCONV=1` y rut
 | Nivel | Comando, desde `a2a-plugin` | Qué necesita |
 |---|---|---|
 | Núcleo y adaptador | `cd core && go test ./...` y `cd plugin && go test ./...` | Go 1.26 o superior |
+| Catálogo de agentes | `cd config/catalog && go test ./...` | Go 1.26 o superior |
 | Esquema, ejemplos, documentación y versiones | `cd config/conformance && go test ./...` | Go |
 | Redis real | `A2A_TEST_REDIS=host:puerto go test -run TestRedisStore ./ownership/` en `core` | Un Redis |
 | Plantillas con KrakenD real | `bash config/templates/render.sh community` y `enterprise` | Docker |
@@ -165,3 +168,7 @@ SONAR_TOKEN=<token> bash scripts/sonar.sh
 ```
 
 El proyecto se analiza con todas las reglas de Go y de Dockerfile activas. El análisis debe terminar con el quality gate en verde, sin incidencias ni hotspots de seguridad.
+
+## Sitio de documentación
+
+Desde `a2a-plugin/site`, ejecuta `npm ci`, `npm run build` y `npm run preview`. Actualiza juntas las páginas Markdown en español e inglés. El sitio estático queda en `a2a-plugin/out/docs-site/`.

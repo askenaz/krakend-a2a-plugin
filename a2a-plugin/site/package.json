@@ -1,0 +1,13 @@
+{
+  "name": "a2a-gateway-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "preview": "node preview.mjs"
+  },
+  "dependencies": {
+    "markdown-it": "15.0.3"
+  },
+  "engines": { "node": ">=22" }
+}
