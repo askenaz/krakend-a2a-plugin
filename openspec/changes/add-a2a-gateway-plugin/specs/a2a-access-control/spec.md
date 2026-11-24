@@ -64,6 +64,10 @@ Cuando una respuesta correcta del agente revela una tarea o un contexto nuevos, 
 - **WHEN** el primer evento de `SendStreamingMessage` contiene una tarea nueva
 - **THEN** la propiedad queda registrada antes de que el cliente reciba ese primer evento
 
+#### Scenario: Comentarios de keepalive antes del primer evento
+- **WHEN** el flujo empieza con bloques SSE sin campo `data`, como un comentario `: ping`
+- **THEN** esos bloques llegan al cliente sin esperar al primer evento, y la propiedad se registra con el primer bloque que sí tiene datos
+
 #### Scenario: Respuesta con error
 - **WHEN** el agente responde con un error JSON-RPC
 - **THEN** el gateway no registra ninguna propiedad

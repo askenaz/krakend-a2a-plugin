@@ -6,9 +6,12 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Escenarios: token válido y cabecera de identidad enviada por el cliente.
@@ -131,6 +134,69 @@ func TestOwnershipFromStreamFirstEvent(t *testing.T) {
 		t.Fatalf("la propiedad debe existir antes del primer evento: %s", r.body)
 	}
 	if r := h.rpc(bob, "GetTask", `{"id":"`+ev.Result.Task.ID+`"}`); r.code() != -32001 {
+		t.Fatalf("otro principal no debe acceder: %s", r.body)
+	}
+}
+
+// Escenario: el agente envía un comentario de keepalive antes del primer
+// evento. El comentario llega al cliente sin esperar al evento, y la propiedad
+// se registra con el primer evento real.
+func TestOwnershipWithKeepaliveBeforeFirstEvent(t *testing.T) {
+	h := newHarness(t, baseConfig)
+	release := make(chan struct{})
+	h.agentFn = func(w http.ResponseWriter, r *http.Request, rpc rpcReq) {
+		if rpc.Method != "SendStreamingMessage" {
+			h.defaultAgent(w, r, rpc)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		f := w.(http.Flusher)
+		fmt.Fprint(w, ": ping\n\nretry: 1000\n\n")
+		f.Flush()
+		select {
+		case <-release:
+		case <-time.After(5 * time.Second):
+		}
+		fmt.Fprintf(w, "data: {\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"task\":{\"id\":\"t-ping\","+
+			"\"contextId\":\"c-ping\",\"status\":{\"state\":\"TASK_STATE_SUBMITTED\"}}}}\n\n", rpc.ID)
+		f.Flush()
+	}
+	req, _ := http.NewRequest(http.MethodPost, h.srv.URL+"/a2a/billing",
+		strings.NewReader(`{"jsonrpc":"2.0","id":"s","method":"SendStreamingMessage","params":`+newTask+`}`))
+	req.Header.Set("Authorization", "Bearer "+alice)
+	req.Header.Set("A2A-Version", "1.0")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	rd := bufio.NewReader(res.Body)
+
+	first := make(chan string, 1)
+	go func() {
+		line, _ := rd.ReadString('\n')
+		first <- line
+	}()
+	select {
+	case line := <-first:
+		if line != ": ping\n" {
+			t.Fatalf("primera línea inesperada: %q", line)
+		}
+	case <-time.After(2 * time.Second):
+		close(release)
+		t.Fatal("el comentario de keepalive debe llegar al cliente sin esperar al primer evento")
+	}
+	close(release)
+
+	rest, _ := io.ReadAll(rd)
+	if !strings.Contains(string(rest), "retry: 1000\n\n") || !strings.Contains(string(rest), `"id":"t-ping"`) {
+		t.Fatalf("el flujo debe llegar completo y en orden: %q", rest)
+	}
+	if r := h.rpc(alice, "GetTask", `{"id":"t-ping"}`); r.code() != 0 {
+		t.Fatalf("quien creó la tarea debe poder consultarla: %s", r.body)
+	}
+	if r := h.rpc(bob, "GetTask", `{"id":"t-ping"}`); r.code() != -32001 {
 		t.Fatalf("otro principal no debe acceder: %s", r.body)
 	}
 }

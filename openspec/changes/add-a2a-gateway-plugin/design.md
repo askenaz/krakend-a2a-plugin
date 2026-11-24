@@ -204,7 +204,7 @@ Para la propiedad solo hace falta localizar unos pocos campos, con una tabla de 
 
 Los endpoints de la clase `stream` usan `no-op` y un tiempo de espera largo declarado en el propio endpoint. El envoltorio de respuesta del borde hace flush después de cada escritura cuando la respuesta es `text/event-stream`. Así el streaming no depende del render de cada edición ni de la función de streaming de Enterprise, y el mismo mecanismo sirve para Community 2.13, cuyo render `no-op` copia sin flush.
 
-El envoltorio solo inspecciona el flujo hasta registrar la propiedad con el primer evento. Después reenvía sin analizar.
+El envoltorio solo inspecciona el flujo hasta registrar la propiedad con el primer evento. Después reenvía sin analizar. Un bloque sin campo `data`, como un comentario de keepalive, no es un evento según SSE: se entrega al momento y se sigue esperando al primero que tenga datos.
 
 Si la validación previa demostrara que en Community 2.13 algo retiene los eventos antes del envoltorio, se aplica la degradación de la spec `a2a-edition-packaging`: anunciar `streaming: false` y rechazar con `-32004`.
 
