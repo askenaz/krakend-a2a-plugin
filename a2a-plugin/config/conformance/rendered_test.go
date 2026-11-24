@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"testing"
 
 	"krakend-a2a.local/core/config"
@@ -24,7 +26,25 @@ type renderedEndpoint struct {
 	Endpoint     string                            `json:"endpoint"`
 	InputHeaders []string                          `json:"input_headers"`
 	ExtraConfig  map[string]map[string]interface{} `json:"extra_config"`
+	Backend      []struct {
+		ExtraConfig map[string]interface{} `json:"extra_config"`
+	} `json:"backend"`
 }
+
+// templateSettings es la parte de settings/a2a.json que solo usan las
+// plantillas: la autenticación común y los ajustes de cada agente.
+type templateSettings struct {
+	Auth   map[string]interface{} `json:"auth"`
+	Agents []struct {
+		ID      string `json:"id"`
+		Gateway struct {
+			Auth               map[string]interface{} `json:"auth"`
+			BackendExtraConfig map[string]interface{} `json:"backend_extra_config"`
+		} `json:"gateway"`
+	} `json:"agents"`
+}
+
+const templateSettingsFile = "../templates/settings/a2a.json"
 
 type renderedDoc struct {
 	Version     int                    `json:"version"`
@@ -58,12 +78,62 @@ func checkRendered(t *testing.T, edition string) {
 	}
 
 	// Escenario: piezas de seguridad presentes en cada endpoint interno.
+	settings := readTemplateSettings(t)
 	for _, e := range doc.Endpoints {
 		if !want[e.Endpoint] {
 			t.Errorf("endpoint inesperado %s", e.Endpoint)
 		}
 		checkInternalEndpoint(t, cfg, e)
+		checkAgentTemplateFields(t, cfg, settings, e)
 	}
+}
+
+func readTemplateSettings(t *testing.T) *templateSettings {
+	t.Helper()
+	raw, err := os.ReadFile(templateSettingsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var s templateSettings
+	if err := json.Unmarshal(raw, &s); err != nil {
+		t.Fatalf("%s no es válido: %v", templateSettingsFile, err)
+	}
+	return &s
+}
+
+// checkAgentTemplateFields comprueba gateway.auth y gateway.backend_extra_config:
+// el validador del endpoint es auth con las claves del agente sustituidas, y el
+// backend lleva exactamente el extra_config del agente.
+func checkAgentTemplateFields(t *testing.T, cfg *config.Config, s *templateSettings, e renderedEndpoint) {
+	t.Helper()
+	id := strings.SplitN(strings.TrimPrefix(e.Endpoint, cfg.InternalPrefix+"/"), "/", 2)[0]
+	for _, a := range s.Agents {
+		if a.ID != id {
+			continue
+		}
+		want := map[string]interface{}{}
+		for k, v := range s.Auth {
+			want[k] = v
+		}
+		for k, v := range a.Gateway.Auth {
+			want[k] = v
+		}
+		got := e.ExtraConfig["auth/validator"]
+		for k, v := range want {
+			if k != "propagate_claims" && !reflect.DeepEqual(got[k], v) {
+				t.Errorf("%s: auth/validator.%s es %v; se esperaba %v", e.Endpoint, k, got[k], v)
+			}
+		}
+		if len(e.Backend) != 1 {
+			t.Fatalf("%s: se esperaba un backend, hay %d", e.Endpoint, len(e.Backend))
+		}
+		if !reflect.DeepEqual(e.Backend[0].ExtraConfig, a.Gateway.BackendExtraConfig) {
+			t.Errorf("%s: extra_config del backend es %v; se esperaba %v",
+				e.Endpoint, e.Backend[0].ExtraConfig, a.Gateway.BackendExtraConfig)
+		}
+		return
+	}
+	t.Errorf("%s: el agente %q no está en %s", e.Endpoint, id, templateSettingsFile)
 }
 
 // a2aBlock extrae el bloque A2A en la forma de cada edición.

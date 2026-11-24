@@ -212,6 +212,19 @@ func TestAccessControlThroughKrakenD(t *testing.T) {
 		t.Errorf("%d peticiones denegadas llegaron al agente", n)
 	}
 
+	// Permisos por agente: el gateway.auth de research en las plantillas exige
+	// a2a.write en sus endpoints internos. A billing le basta a2a.read.
+	resetAgent(t, "research")
+	if r := rawRPC(t, e.gw, "research", reader, "1.0", "SendMessage", newMsgParams()); r.Status != 403 {
+		t.Errorf("research sin a2a.write: %d %s", r.Status, r.Body)
+	}
+	if n := len(agentReceived(t, "research")); n != 0 {
+		t.Errorf("la petición sin permiso sobre research llegó al agente")
+	}
+	if r := rawRPC(t, e.gw, "billing", reader, "1.0", "SendMessage", newMsgParams()); r.Status != 200 || r.code() != 0 {
+		t.Errorf("billing con a2a.read: %d %s", r.Status, r.Body)
+	}
+
 	// El propietario sí accede.
 	if r := rawRPC(t, e.gw, "billing", alice, "1.0", "GetTask", `{"id":"`+taskID+`"}`); r.code() != 0 {
 		t.Errorf("el propietario debe acceder: %s", r.Body)

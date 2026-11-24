@@ -71,7 +71,8 @@
       "disabled_operations": ["ListTasks"],
       "gateway": {
         "host": "http://research:9002", "path": "/", "timeout": "10s", "stream_timeout": "120s",
-        "extra_config": { "qos/ratelimit/router": { "max_rate": 3 } }
+        "extra_config": { "qos/ratelimit/router": { "max_rate": 3 } },
+        "auth": { "scopes_key": "scope", "scopes": ["a2a.write"], "scopes_matcher": "all" }
       }
     }
   ]

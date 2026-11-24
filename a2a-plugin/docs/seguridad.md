@@ -8,6 +8,8 @@ Este documento explica qué protege el plugin A2A, qué deja en manos de KrakenD
 |---|---|
 | ¿El token es auténtico, vigente y del emisor esperado? | KrakenD, con `auth/validator` y la revocación nativa |
 | ¿Tiene el rol que exige el endpoint? | KrakenD, con `auth/validator` |
+| ¿Puede este cliente usar este agente? | KrakenD, con el `auth/validator` de los endpoints internos del agente. Las plantillas lo ajustan por agente con `gateway.auth` |
+| ¿Es el gateway quien llama al agente? | KrakenD, con la configuración del backend. Las plantillas la ajustan por agente con `gateway.backend_extra_config` |
 | ¿Tiene los scopes que exige esta operación A2A? | El plugin, con `authorization.operation_scopes` |
 | ¿Puede este principal tocar esta tarea o este contexto? | El plugin, con el registro de propiedad |
 | ¿Es aceptable la URL de webhook que pide el cliente? | El plugin, con la guardia de webhooks |
@@ -76,6 +78,8 @@ Un host que no se puede resolver se rechaza, salvo que esté en `allowed_hosts` 
 | `X-A2A-Operation`, `X-A2A-Agent`, `X-A2A-Version`, `X-A2A-Request-Id` | |
 
 Un agente puede confiar en las cabeceras de identidad solo si es accesible únicamente a través del gateway. El agente de referencia del entorno de demostración lo hace así para que el SDK acote `ListTasks` al llamante.
+
+Si el agente no puede quedar aislado en la red, haz que el gateway se autentique ante él, por ejemplo con `auth/client-credentials` en `gateway.backend_extra_config`, y que el agente rechace lo que no traiga esa credencial.
 
 ## Agent Cards
 
